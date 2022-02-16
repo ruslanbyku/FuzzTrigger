@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# -emit-llvm + -c = .bc
+# -emit-llvm + -S = .ll
+#
+# Compile the code without optimization (-O3).
+# There are multiple reasons for that:
+# 1) Weird code generation (challenging to read by yourself)
+# 2) Ditching the vulnerable pieces of code
+#
+
+clang -emit-llvm test_main.c -S -o test_main.ll

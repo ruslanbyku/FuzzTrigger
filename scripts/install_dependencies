@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# lib32-llvm might be handy
+pacman -S clang llvm

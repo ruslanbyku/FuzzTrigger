@@ -1,0 +1,10 @@
+#!/bin/bash
+
+clang++ -g -m32 \
+-fno-stack-protector \
+\
+-fsanitize=address,fuzzer \
+-fsanitize-coverage=trace-cmp,trace-gep,trace-div \
+-fsanitize-recover=address \
+\
+fuzz_main.cc -o main_fuzzer

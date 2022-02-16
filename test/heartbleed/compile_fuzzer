@@ -1,0 +1,12 @@
+#!/bin/bash
+
+clang++ -O2 -g \
+-fno-omit-frame-pointer \
+-fsanitize=address,fuzzer \
+-fsanitize-coverage=trace-cmp,trace-gep,trace-div \
+\
+-Iopenssl/openssl1.0.1f/include \
+openssl/openssl1.0.1f/libssl.a \
+openssl/openssl1.0.1f/libcrypto.a \
+\
+fuzz_openssl.cc -o openssl_fuzzer

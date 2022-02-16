@@ -1,0 +1,12 @@
+#!/bin/bash
+
+tar xzf openssl1.0.1f.tgz
+cd openssl1.0.1f/ || return
+
+./config
+make clean
+make CC="\
+clang -O2 -g \
+-fno-omit-frame-pointer \
+-fsanitize=address,fuzzer-no-link \
+-fsanitize-coverage=trace-cmp,trace-gep,trace-div" -j$(nproc)
