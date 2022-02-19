@@ -52,16 +52,17 @@ struct Type {
 using StructField = std::pair<uint64_t, std::unique_ptr<Type>>;
 
 struct Body {
-    Body() : number_of_fields_(0), size_(0), alignment_(0) {}
+    explicit Body() : number_of_fields_(0), size_(0), alignment_(0) {}
     uint32_t                 number_of_fields_;
     uint64_t                 size_;
     uint16_t                 alignment_;
     std::vector<StructField> fields_;
 };
 
-// Content consists of a union of:
-// 1. Address to the struct with body
-// 2. Actual content (body) of the struct
+// Content consists of a union:
+// std::variant
+//     |__std::shared_ptr<StructType> (the address to the struct with a body)
+//     |__std::unique_ptr<Body>       (actual content (body) of the struct)
 struct StructType;
 using Content = std::variant<std::shared_ptr<StructType>,
                                                      std::unique_ptr<Body>>;

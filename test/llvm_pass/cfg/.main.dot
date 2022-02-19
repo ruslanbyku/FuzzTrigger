@@ -1,0 +1,9 @@
+digraph "CFG for 'main' function" {
+	label="CFG for 'main' function";
+
+	Node0x55ba8ad41bb0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870",label="{%2:\l  %3 = alloca i32, align 4\l  %4 = alloca i32, align 4\l  %5 = alloca i8**, align 8\l  %6 = alloca [3 x i8], align 1\l  %7 = alloca %struct.A*, align 8\l  %8 = alloca i32*, align 8\l  store i32 0, i32* %3, align 4\l  store i32 %0, i32* %4, align 4\l  store i8** %1, i8*** %5, align 8\l  %9 = load i32, i32* %4, align 4\l  %10 = icmp ne i32 %9, 2\l  br i1 %10, label %11, label %12\l|{<s0>T|<s1>F}}"];
+	Node0x55ba8ad41bb0:s0 -> Node0x55ba8ad41ce0;
+	Node0x55ba8ad41bb0:s1 -> Node0x55ba8ad42230;
+	Node0x55ba8ad41ce0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#6687ed70",label="{%11:\l11:                                               \l  call void @exit(i32 1) #6\l  unreachable\l}"];
+	Node0x55ba8ad42230 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870",label="{%12:\l12:                                               \l  %13 = bitcast [3 x i8]* %6 to i8*\l  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %13, i8* align 1\l... getelementptr inbounds ([3 x i8], [3 x i8]* @__const.main.characters, i32 0,\l... i32 0), i64 3, i1 false)\l  %14 = getelementptr inbounds [3 x i8], [3 x i8]* %6, i64 0, i64 0\l  call void @print_characters(i8* %14)\l  %15 = call %struct.A* @initialize_struct()\l  store %struct.A* %15, %struct.A** %7, align 8\l  %16 = call i32* @initialize_array(i32 10)\l  store i32* %16, i32** %8, align 8\l  %17 = load %struct.A*, %struct.A** %7, align 8\l  %18 = bitcast %struct.A* %17 to i8*\l  call void @free(i8* %18) #7\l  %19 = load i32*, i32** %8, align 8\l  %20 = bitcast i32* %19 to i8*\l  call void @free(i8* %20) #7\l  %21 = load i8**, i8*** %5, align 8\l  %22 = getelementptr inbounds i8*, i8** %21, i64 1\l  %23 = load i8*, i8** %22, align 8\l  %24 = call i32 @un_init(i8* %23)\l  ret i32 0\l}"];
+}

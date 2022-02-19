@@ -35,7 +35,7 @@ struct A {
     int i;
 };
 
-typedef struct A* (*struct_initialization)();
+//typedef struct A* (*struct_initialization)();
 
 struct A* initialize_struct() {
     struct A* collection = (struct A*) malloc(sizeof(struct A));
@@ -55,9 +55,11 @@ struct A* initialize_struct() {
     return collection;
 }
 
+/*
 struct A* initialize_struct_through_function(struct_initialization pointer) {
     return pointer();
 }
+*/
 
 int* initialize_array(int number_of_bytes) {
     if (number_of_bytes < 1) {
@@ -104,8 +106,7 @@ int un_init(char* line) {
     }
 
     line_len = get_line_len(line);
-    // THE TIME HAS NOT COME YET!
-    /*
+
     int counter = 0;
     for (int ii = 0; ii < line_len; ++ii) {
         counter += ii;
@@ -113,7 +114,7 @@ int un_init(char* line) {
             counter /= 2;
         }
     }
-    */
+
     if (line_len > LINE_MAX_LEN) {
         fprintf(stdout, "String too long!\n");
         return logged_in;
@@ -146,8 +147,7 @@ int main(int argc, char** argv) {
     //
     char characters[3] = {'x', 'y', 'z'};
     print_characters(characters);
-    struct A* collection =
-            initialize_struct_through_function(initialize_struct);
+    struct A* collection = initialize_struct();
     int* array = initialize_array(10);
     free(collection);
     free(array);

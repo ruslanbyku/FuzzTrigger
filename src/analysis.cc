@@ -20,6 +20,9 @@ std::unique_ptr<Module> Analysis::GetModuleDump() {
     return std::move(module_dump_);
 }
 
+// ------------------------------------------------------------------------- //
+//                              Load IR file                                 //
+// ------------------------------------------------------------------------- //
 void Analysis::LaunchPassOnIRModule(std::string&& ir_module) {
     llvm::SMDiagnostic error;
     llvm::LLVMContext context;
@@ -33,9 +36,8 @@ void Analysis::LaunchPassOnIRModule(std::string&& ir_module) {
         return;
     }
 
-    // Tell the pass that analysis operations will be done further
+    // Tell the pass that analysis operations (CallGraph) will be done further
     llvm::PassRegistry* passReg = llvm::PassRegistry::getPassRegistry();
-    // llvm::CallGraphWrapperPass needs it
     llvm::initializeAnalysis(*passReg);
 
     // Register the pass and run it
@@ -46,25 +48,25 @@ void Analysis::LaunchPassOnIRModule(std::string&& ir_module) {
     success_ = true;
 }
 
-void Analysis::getAnalysisUsage(llvm::AnalysisUsage& analysis_usage) const {
-    // Must be executed first
-    // AU.addRequired<llvm::CallGraphWrapperPass>();
-}
+void Analysis::getAnalysisUsage(llvm::AnalysisUsage& analysis_usage) const {}
 
 llvm::StringRef Analysis::getPassName() const {
     return "ModuleAnalysis";
 }
 
+// ------------------------------------------------------------------------- //
+//                              Run Pass manager                             //
+// ------------------------------------------------------------------------- //
 bool Analysis::runOnModule(llvm::Module& module) {
     // --------------------------------------------------------------------- //
-    //                      Initialize class attributes                      //
+    //                 Initialize class attributes (important)               //
     // --------------------------------------------------------------------- //
     // Initialize global module for further application
     module_ = &module;
     data_layout_ = std::make_unique<llvm::DataLayout>(&module);
 
     // --------------------------------------------------------------------- //
-    //                             Dump module                               //
+    //                        Dump module (important)                        //
     // --------------------------------------------------------------------- //
     // Start dumping the module
     module_dump_ = std::make_unique<Module>();
@@ -77,6 +79,11 @@ bool Analysis::runOnModule(llvm::Module& module) {
     //                          Dump global structs                          //
     // --------------------------------------------------------------------- //
     DumpModuleStructs();
+
+    // --------------------------------------------------------------------- //
+    //                            Construct CFGs                             //
+    // --------------------------------------------------------------------- //
+    MakeControlFlowGraph(*GetRootFunction());
 
     // --------------------------------------------------------------------- //
     //                         Dump module functions                         //
@@ -98,6 +105,7 @@ bool Analysis::runOnModule(llvm::Module& module) {
     for (llvm::Module::const_iterator ii = module.begin();
          ii != module.end(); ++ii) {
         const llvm::Function& function = *ii;
+
         std::unique_ptr<Function> function_dump = DumpModuleFunction(function);
 
         // Append the dumped function to the vector of module functions
@@ -128,7 +136,7 @@ void Analysis::DumpModuleStructs() {
 
         // Cast Type to StructType as we are sure, that there is a StructType
         // object beneath.
-        auto _struct_ = reinterpret_cast<StructType*>(type_dump.release());
+        auto _struct_ = static_cast<StructType*>(type_dump.release());
         std::shared_ptr<StructType> struct_dump(_struct_);
 
         // Append the dumped struct to the vector of module structs
@@ -238,7 +246,7 @@ std::unique_ptr<Type> Analysis::ResolveValueType(llvm::Type* data_type) {
 
         //TODO: Resolve function type
         type_dump = std::make_unique<FunctionType>();
-        auto function_dump = reinterpret_cast<FunctionType*>(type_dump.get());
+        auto function_dump = static_cast<FunctionType*>(type_dump.get());
         function_dump->base_type_ = TYPE_FUNC;
 
     } else if (base_type->isArrayTy()) {
@@ -321,7 +329,7 @@ std::unique_ptr<Type> Analysis::ResolveStructType(llvm::Type* data_type,
                                                   llvm::Type* base_type) {
     // Create an object where to dump found data
     std::unique_ptr<Type> type_dump = std::make_unique<StructType>();
-    auto struct_dump = reinterpret_cast<StructType*>(type_dump.get());
+    auto struct_dump = static_cast<StructType*>(type_dump.get());
     // Get actual data about the found struct
     auto struct_type =
             llvm::dyn_cast<llvm::StructType>(base_type);
@@ -431,4 +439,107 @@ std::unique_ptr<Type> Analysis::ResolveStructType(llvm::Type* data_type,
     struct_dump->content_ = std::move(struct_body);
 
     return type_dump;
+}
+
+//
+// Root function is a function that calls every other function in the module
+//
+const llvm::Function* Analysis::GetRootFunction() const {
+    llvm::CallGraph call_graph(*module_);
+
+    // Enumerate all functions in the module
+    for (auto& ii: call_graph) {
+        llvm::CallGraphNode* call_graph_node = ii.second.get();
+        // Find out the number of times the function was encountered in the
+        // module
+        if (call_graph_node->getNumReferences() == 1) {
+            const llvm::Function* function = ii.first;
+            // Find out if the function has a definition
+            if (!function->isDeclaration()) {
+                return function;
+            }
+        }
+    }
+
+    return nullptr;
+}
+
+//
+// The method works recursively for every function in the module.
+// 1. A function is passed to the method, ideally a root function.
+// 2. When the root function is passed, a new CFG object is added to the global
+// array of CFG objects.
+// 3. The first basic block aka entry block of the function is passed to a
+// queue for further analysis.
+// 4. As the analysis of the entry block goes, new functions are discovered and
+// recursively passed to the same method.
+// 5. As a result the array of CFG objects is filled in the order of how
+// functions are called in the module.
+//
+void Analysis::MakeControlFlowGraph(const llvm::Function& function) {
+    // Check if the function has a body
+    if (function.empty()) {
+        // It does not
+        return;
+    }
+
+    const llvm::BasicBlock* entry_block   = &function.getEntryBlock();
+    std::queue<const llvm::BasicBlock*>     bb_queue;
+    std::map<const llvm::BasicBlock*, bool> visited;
+    uint32_t                                block_id = 0;
+
+    // Add new CFG object for further analysis
+    module_cfg_.emplace_back(std::make_unique<CFG>(function));
+    CFG* cfg = module_cfg_.back().get();
+
+    // Create/initialize all vertices for the adjacency list
+    for (auto& basic_block: function.getBasicBlockList()) {
+        cfg->AddVertex(block_id, &basic_block);
+        ++block_id;
+    }
+
+    // Add the entry block to the queue
+    bb_queue.push(entry_block);
+    visited[entry_block] = true;
+
+    // Start processing vertices until there is no left
+    while (!bb_queue.empty()) {
+        const llvm::BasicBlock* block = bb_queue.front();
+        bb_queue.pop();
+
+        // Enter the basic block and search for call instructions
+        for (auto ii = block->begin(); ii != block->end(); ++ii) {
+            if (auto caller = llvm::dyn_cast<llvm::CallInst>(ii)) {
+                // Call instruction is found, take the callee
+                const llvm::Function* callee = caller->getCalledFunction();
+
+                if (!callee) { // There is no callee in the caller
+                    continue;
+                }
+
+                // Recursively construct a new CFG for a new function
+                MakeControlFlowGraph(*callee);
+            }
+        }
+
+        // Find all the neighbors (successors) for the basic block
+        const llvm::Instruction* terminator = block->getTerminator();
+        for (uint32_t idx = 0; idx < terminator->getNumSuccessors(); ++idx) {
+            const llvm::BasicBlock* successor = terminator->getSuccessor(idx);
+
+            // A neighboring vertex is found, it can form an edge
+            cfg->AddEdge(block, successor);
+
+            // If all neighbors of the vertex has been previously found, then
+            // do not process it again
+            if (visited.find(successor) != visited.end()) {
+                continue;
+            }
+
+            // Mark the vertex as visited and put it in the queue for the
+            // further processing
+            visited[successor] = true;
+            bb_queue.push(successor);
+        }
+    }
 }

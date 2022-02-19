@@ -17,14 +17,24 @@ add_definitions(${LLVM_DEFINITIONS_LIST})
 include_directories(
         ${LLVM_INCLUDE_DIRS}
 )
-set(SOURCES src/main.cc src/module.cc src/module.h src/analysis.cc src/analysis.h src/type.h)
+set(SOURCES
+        src/main.cc
+        src/module.cc
+        src/module.h
+        src/analysis.cc
+        src/analysis.h
+        src/type.h
+        src/cfg.h
+        src/cfg.cc
+        )
 
 #
 # Compilation flags
 #
 # Disable C++ native RTTI and EH.
 # Use RTTI with llvm instead
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -D${LLVM_ENABLE_RTTI}:BOOL=OFF -D${LLVM_ENABLE_EH}:BOOL=OFF")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra \
+                 -D${LLVM_ENABLE_RTTI}:BOOL=OFF -D${LLVM_ENABLE_EH}:BOOL=OFF")
 
 add_executable(AutoFuzz ${SOURCES})
 

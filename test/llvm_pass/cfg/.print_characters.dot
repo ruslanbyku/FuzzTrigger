@@ -1,0 +1,5 @@
+digraph "CFG for 'print_characters' function" {
+	label="CFG for 'print_characters' function";
+
+	Node0x55ba8ad3c060 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870",label="{%1:\l  %2 = alloca i8*, align 8\l  store i8* %0, i8** %2, align 8\l  %3 = load i8*, i8** %2, align 8\l  %4 = load i8, i8* %3, align 1\l  %5 = sext i8 %4 to i32\l  %6 = load i8*, i8** %2, align 8\l  %7 = getelementptr inbounds i8, i8* %6, i64 1\l  %8 = load i8, i8* %7, align 1\l  %9 = sext i8 %8 to i32\l  %10 = load i8*, i8** %2, align 8\l  %11 = getelementptr inbounds i8, i8* %10, i64 2\l  %12 = load i8, i8* %11, align 1\l  %13 = sext i8 %12 to i32\l  %14 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([8 x i8], [8 x\l... i8]* @.str, i64 0, i64 0), i32 %5, i32 %9, i32 %13)\l  ret void\l}"];
+}

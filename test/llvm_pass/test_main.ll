@@ -75,15 +75,6 @@ define dso_local %struct.A* @initialize_struct() #0 {
 declare noalias align 16 i8* @malloc(i64) #1
 
 ; Function Attrs: noinline nounwind optnone sspstrong uwtable
-define dso_local %struct.A* @initialize_struct_through_function(%struct.A* (...)* %0) #0 {
-  %2 = alloca %struct.A* (...)*, align 8
-  store %struct.A* (...)* %0, %struct.A* (...)** %2, align 8
-  %3 = load %struct.A* (...)*, %struct.A* (...)** %2, align 8
-  %4 = call %struct.A* (...) %3()
-  ret %struct.A* %4
-}
-
-; Function Attrs: noinline nounwind optnone sspstrong uwtable
 define dso_local i32* @initialize_array(i32 %0) #0 {
   %2 = alloca i32*, align 8
   %3 = alloca i32, align 4
@@ -175,60 +166,98 @@ define dso_local i32 @un_init(i8* %0) #0 {
   %4 = alloca [32 x i8], align 16
   %5 = alloca i32, align 4
   %6 = alloca i32, align 4
+  %7 = alloca i32, align 4
+  %8 = alloca i32, align 4
   store i8* %0, i8** %3, align 8
   store i32 0, i32* %5, align 4
   store i32 0, i32* %6, align 4
-  %7 = load i8*, i8** %3, align 8
-  %8 = call zeroext i1 @is_valid(i8* %7)
-  br i1 %8, label %11, label %9
-
-9:                                                ; preds = %1
-  %10 = load i32, i32* %6, align 4
-  store i32 %10, i32* %2, align 4
-  br label %34
+  %9 = load i8*, i8** %3, align 8
+  %10 = call zeroext i1 @is_valid(i8* %9)
+  br i1 %10, label %13, label %11
 
 11:                                               ; preds = %1
-  %12 = load i8*, i8** %3, align 8
-  %13 = call i32 @get_line_len(i8* %12)
-  store i32 %13, i32* %5, align 4
-  %14 = load i32, i32* %5, align 4
-  %15 = icmp sgt i32 %14, 36
-  br i1 %15, label %16, label %20
+  %12 = load i32, i32* %6, align 4
+  store i32 %12, i32* %2, align 4
+  br label %55
 
-16:                                               ; preds = %11
-  %17 = load %struct._IO_FILE*, %struct._IO_FILE** @stdout, align 8
-  %18 = call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %17, i8* getelementptr inbounds ([18 x i8], [18 x i8]* @.str.1, i64 0, i64 0))
-  %19 = load i32, i32* %6, align 4
-  store i32 %19, i32* %2, align 4
-  br label %34
+13:                                               ; preds = %1
+  %14 = load i8*, i8** %3, align 8
+  %15 = call i32 @get_line_len(i8* %14)
+  store i32 %15, i32* %5, align 4
+  store i32 0, i32* %7, align 4
+  store i32 0, i32* %8, align 4
+  br label %16
 
-20:                                               ; preds = %11
-  %21 = getelementptr inbounds [32 x i8], [32 x i8]* %4, i64 0, i64 0
-  %22 = load i8*, i8** %3, align 8
-  %23 = load i32, i32* %5, align 4
-  %24 = sext i32 %23 to i64
-  %25 = call i8* @strncpy(i8* %21, i8* %22, i64 %24) #6
-  br label %26
+16:                                               ; preds = %31, %13
+  %17 = load i32, i32* %8, align 4
+  %18 = load i32, i32* %5, align 4
+  %19 = icmp slt i32 %17, %18
+  br i1 %19, label %20, label %34
 
-26:                                               ; preds = %20
-  %27 = load i32, i32* %6, align 4
-  %28 = icmp eq i32 %27, 1094795585
-  br i1 %28, label %29, label %32
+20:                                               ; preds = %16
+  %21 = load i32, i32* %8, align 4
+  %22 = load i32, i32* %7, align 4
+  %23 = add nsw i32 %22, %21
+  store i32 %23, i32* %7, align 4
+  %24 = load i32, i32* %7, align 4
+  %25 = srem i32 %24, 2
+  %26 = icmp eq i32 %25, 0
+  br i1 %26, label %27, label %30
 
-29:                                               ; preds = %26
-  %30 = load %struct._IO_FILE*, %struct._IO_FILE** @stdout, align 8
-  %31 = call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %30, i8* getelementptr inbounds ([36 x i8], [36 x i8]* @.str.2, i64 0, i64 0))
-  br label %32
+27:                                               ; preds = %20
+  %28 = load i32, i32* %7, align 4
+  %29 = sdiv i32 %28, 2
+  store i32 %29, i32* %7, align 4
+  br label %30
 
-32:                                               ; preds = %29, %26
+30:                                               ; preds = %27, %20
+  br label %31
+
+31:                                               ; preds = %30
+  %32 = load i32, i32* %8, align 4
+  %33 = add nsw i32 %32, 1
+  store i32 %33, i32* %8, align 4
+  br label %16, !llvm.loop !6
+
+34:                                               ; preds = %16
+  %35 = load i32, i32* %5, align 4
+  %36 = icmp sgt i32 %35, 36
+  br i1 %36, label %37, label %41
+
+37:                                               ; preds = %34
+  %38 = load %struct._IO_FILE*, %struct._IO_FILE** @stdout, align 8
+  %39 = call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %38, i8* getelementptr inbounds ([18 x i8], [18 x i8]* @.str.1, i64 0, i64 0))
+  %40 = load i32, i32* %6, align 4
+  store i32 %40, i32* %2, align 4
+  br label %55
+
+41:                                               ; preds = %34
+  %42 = getelementptr inbounds [32 x i8], [32 x i8]* %4, i64 0, i64 0
+  %43 = load i8*, i8** %3, align 8
+  %44 = load i32, i32* %5, align 4
+  %45 = sext i32 %44 to i64
+  %46 = call i8* @strncpy(i8* %42, i8* %43, i64 %45) #6
+  br label %47
+
+47:                                               ; preds = %41
+  %48 = load i32, i32* %6, align 4
+  %49 = icmp eq i32 %48, 1094795585
+  br i1 %49, label %50, label %53
+
+50:                                               ; preds = %47
+  %51 = load %struct._IO_FILE*, %struct._IO_FILE** @stdout, align 8
+  %52 = call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %51, i8* getelementptr inbounds ([36 x i8], [36 x i8]* @.str.2, i64 0, i64 0))
+  br label %53
+
+53:                                               ; preds = %50, %47
   store i32 1, i32* %6, align 4
-  %33 = load i32, i32* %6, align 4
-  store i32 %33, i32* %2, align 4
-  br label %34
+  %54 = load i32, i32* %6, align 4
+  store i32 %54, i32* %2, align 4
+  br label %55
 
-34:                                               ; preds = %32, %16, %9
-  %35 = load i32, i32* %2, align 4
-  ret i32 %35
+55:                                               ; preds = %53, %37, %11
+  %56 = load i32, i32* %2, align 4
+  ret i32 %56
 }
 
 declare i32 @fprintf(%struct._IO_FILE*, i8*, ...) #2
@@ -260,7 +289,7 @@ define dso_local i32 @main(i32 %0, i8** %1) #0 {
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %13, i8* align 1 getelementptr inbounds ([3 x i8], [3 x i8]* @__const.main.characters, i32 0, i32 0), i64 3, i1 false)
   %14 = getelementptr inbounds [3 x i8], [3 x i8]* %6, i64 0, i64 0
   call void @print_characters(i8* %14)
-  %15 = call %struct.A* @initialize_struct_through_function(%struct.A* (...)* bitcast (%struct.A* ()* @initialize_struct to %struct.A* (...)*))
+  %15 = call %struct.A* @initialize_struct()
   store %struct.A* %15, %struct.A** %7, align 8
   %16 = call i32* @initialize_array(i32 10)
   store i32* %16, i32** %8, align 8
@@ -305,3 +334,5 @@ attributes #8 = { noreturn nounwind }
 !3 = !{i32 7, !"uwtable", i32 1}
 !4 = !{i32 7, !"frame-pointer", i32 2}
 !5 = !{!"clang version 13.0.0"}
+!6 = distinct !{!6, !7}
+!7 = !{!"llvm.loop.mustprogress"}

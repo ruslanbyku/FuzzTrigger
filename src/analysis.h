@@ -2,6 +2,10 @@
 #define AUTOFUZZ_ANALYSIS_H
 
 #include "module.h"
+#include "cfg.h"
+
+#include <queue>
+#include <map>
 
 #include <llvm/Pass.h>
 #include <llvm/PassRegistry.h>
@@ -15,16 +19,13 @@
 #include <llvm/IR/DataLayout.h>
 // #include <llvm/IR/Function.h>
 // #include <llvm/IR/Instruction.h>
-//#include <llvm/IR/Constants.h>
-
+// #include <llvm/IR/Constants.h>
 // #include <llvm/IR/Dominators.h>
-
-// #include <llvm/IR/CFG.h>
 // #include <llvm/IR/User.h>
 
 // #include <llvm/Analysis/LoopInfo.h>
 // #include <llvm/Analysis/PostDominators.h>
-// #include <llvm/Analysis/CallGraph.h>
+#include <llvm/Analysis/CallGraph.h>
 
 #include <llvm/Support/SourceMgr.h>
 // #include <llvm/Support/raw_ostream.h>
@@ -44,21 +45,28 @@ public:
     explicit operator bool() const;
     std::unique_ptr<Module> GetModuleDump();
 
+    // --------------------------------------------------------------------- //
+    //                     LLVM specific methods                             //
+    // --------------------------------------------------------------------- //
     // Explicitly specify what kind of analysis has to be done on the run.
-    virtual void getAnalysisUsage(llvm::AnalysisUsage&) const override;
-    virtual llvm::StringRef getPassName() const override;
+    void getAnalysisUsage(llvm::AnalysisUsage&) const override;
+    llvm::StringRef getPassName() const override;
     // Process the module on invocation
-    virtual bool runOnModule(llvm::Module&) override;
+    bool runOnModule(llvm::Module&) override;
 
 private:
-    // Set this flag if the pass has worked successfully
-    bool success_;
+    // Set this flag if the pass has worked out
+    bool                              success_;
     // llvm main module
-    llvm::Module* module_;
+    llvm::Module*                     module_;
     // Module auxiliary information
     std::unique_ptr<llvm::DataLayout> data_layout_;
     // An object for dump of an IR from the memory
-    std::unique_ptr<Module> module_dump_;
+    std::unique_ptr<Module>           module_dump_;
+    // CFG of module functions
+    // The order of objects in the container is the order of how functions
+    // are called in the module
+    std::vector<std::unique_ptr<CFG>> module_cfg_;
 
     void LaunchPassOnIRModule(std::string&&);
     void DumpModuleStructs();
@@ -68,6 +76,9 @@ private:
     std::unique_ptr<Type> ResolveValueType(llvm::Type*);
     std::unique_ptr<Type> ResolveIntegerType(llvm::Type*, llvm::Type*);
     std::unique_ptr<Type> ResolveStructType(llvm::Type*, llvm::Type*);
+
+    const llvm::Function* GetRootFunction() const;
+    void MakeControlFlowGraph(const llvm::Function&);
 };
 
 #endif //AUTOFUZZ_ANALYSIS_H

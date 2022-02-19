@@ -1,0 +1,38 @@
+digraph "CFG for 'un_init' function" {
+	label="CFG for 'un_init' function";
+
+	Node0x55ba8ad3de60 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#f1ccb870",label="{%1:\l  %2 = alloca i32, align 4\l  %3 = alloca i8*, align 8\l  %4 = alloca [32 x i8], align 16\l  %5 = alloca i32, align 4\l  %6 = alloca i32, align 4\l  %7 = alloca i32, align 4\l  %8 = alloca i32, align 4\l  store i8* %0, i8** %3, align 8\l  store i32 0, i32* %5, align 4\l  store i32 0, i32* %6, align 4\l  %9 = load i8*, i8** %3, align 8\l  %10 = call zeroext i1 @is_valid(i8* %9)\l  br i1 %10, label %13, label %11\l|{<s0>T|<s1>F}}"];
+	Node0x55ba8ad3de60:s0 -> Node0x55ba8ad3e590;
+	Node0x55ba8ad3de60:s1 -> Node0x55ba8ad3e5e0;
+	Node0x55ba8ad3e5e0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#dbdcde70",label="{%11:\l11:                                               \l  %12 = load i32, i32* %6, align 4\l  store i32 %12, i32* %2, align 4\l  br label %55\l}"];
+	Node0x55ba8ad3e5e0 -> Node0x55ba8ad3e7e0;
+	Node0x55ba8ad3e590 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#dbdcde70",label="{%13:\l13:                                               \l  %14 = load i8*, i8** %3, align 8\l  %15 = call i32 @get_line_len(i8* %14)\l  store i32 %15, i32* %5, align 4\l  store i32 0, i32* %7, align 4\l  store i32 0, i32* %8, align 4\l  br label %16\l}"];
+	Node0x55ba8ad3e590 -> Node0x55ba8ad3ebb0;
+	Node0x55ba8ad3ebb0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870",label="{%16:\l16:                                               \l  %17 = load i32, i32* %8, align 4\l  %18 = load i32, i32* %5, align 4\l  %19 = icmp slt i32 %17, %18\l  br i1 %19, label %20, label %34\l|{<s0>T|<s1>F}}"];
+	Node0x55ba8ad3ebb0:s0 -> Node0x55ba8ad3ed50;
+	Node0x55ba8ad3ebb0:s1 -> Node0x55ba8ad3eda0;
+	Node0x55ba8ad3ed50 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870",label="{%20:\l20:                                               \l  %21 = load i32, i32* %8, align 4\l  %22 = load i32, i32* %7, align 4\l  %23 = add nsw i32 %22, %21\l  store i32 %23, i32* %7, align 4\l  %24 = load i32, i32* %7, align 4\l  %25 = srem i32 %24, 2\l  %26 = icmp eq i32 %25, 0\l  br i1 %26, label %27, label %30\l|{<s0>T|<s1>F}}"];
+	Node0x55ba8ad3ed50:s0 -> Node0x55ba8ad3f270;
+	Node0x55ba8ad3ed50:s1 -> Node0x55ba8ad3f2c0;
+	Node0x55ba8ad3f270 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#e36c5570",label="{%27:\l27:                                               \l  %28 = load i32, i32* %7, align 4\l  %29 = sdiv i32 %28, 2\l  store i32 %29, i32* %7, align 4\l  br label %30\l}"];
+	Node0x55ba8ad3f270 -> Node0x55ba8ad3f2c0;
+	Node0x55ba8ad3f2c0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870",label="{%30:\l30:                                               \l  br label %31\l}"];
+	Node0x55ba8ad3f2c0 -> Node0x55ba8ad3f600;
+	Node0x55ba8ad3f600 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870",label="{%31:\l31:                                               \l  %32 = load i32, i32* %8, align 4\l  %33 = add nsw i32 %32, 1\l  store i32 %33, i32* %8, align 4\l  br label %16, !llvm.loop !6\l}"];
+	Node0x55ba8ad3f600 -> Node0x55ba8ad3ebb0;
+	Node0x55ba8ad3eda0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#dbdcde70",label="{%34:\l34:                                               \l  %35 = load i32, i32* %5, align 4\l  %36 = icmp sgt i32 %35, 36\l  br i1 %36, label %37, label %41\l|{<s0>T|<s1>F}}"];
+	Node0x55ba8ad3eda0:s0 -> Node0x55ba8ad40660;
+	Node0x55ba8ad3eda0:s1 -> Node0x55ba8ad406b0;
+	Node0x55ba8ad40660 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#bfd3f670",label="{%37:\l37:                                               \l  %38 = load %struct._IO_FILE*, %struct._IO_FILE** @stdout, align 8\l  %39 = call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %38,\l... i8* getelementptr inbounds ([18 x i8], [18 x i8]* @.str.1, i64 0, i64 0))\l  %40 = load i32, i32* %6, align 4\l  store i32 %40, i32* %2, align 4\l  br label %55\l}"];
+	Node0x55ba8ad40660 -> Node0x55ba8ad3e7e0;
+	Node0x55ba8ad406b0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#bfd3f670",label="{%41:\l41:                                               \l  %42 = getelementptr inbounds [32 x i8], [32 x i8]* %4, i64 0, i64 0\l  %43 = load i8*, i8** %3, align 8\l  %44 = load i32, i32* %5, align 4\l  %45 = sext i32 %44 to i64\l  %46 = call i8* @strncpy(i8* %42, i8* %43, i64 %45) #6\l  br label %47\l}"];
+	Node0x55ba8ad406b0 -> Node0x55ba8ad40ff0;
+	Node0x55ba8ad40ff0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#bfd3f670",label="{%47:\l47:                                               \l  %48 = load i32, i32* %6, align 4\l  %49 = icmp eq i32 %48, 1094795585\l  br i1 %49, label %50, label %53\l|{<s0>T|<s1>F}}"];
+	Node0x55ba8ad40ff0:s0 -> Node0x55ba8ad411e0;
+	Node0x55ba8ad40ff0:s1 -> Node0x55ba8ad41230;
+	Node0x55ba8ad411e0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#a1c0ff70",label="{%50:\l50:                                               \l  %51 = load %struct._IO_FILE*, %struct._IO_FILE** @stdout, align 8\l  %52 = call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %51,\l... i8* getelementptr inbounds ([36 x i8], [36 x i8]* @.str.2, i64 0, i64 0))\l  br label %53\l}"];
+	Node0x55ba8ad411e0 -> Node0x55ba8ad41230;
+	Node0x55ba8ad41230 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#bfd3f670",label="{%53:\l53:                                               \l  store i32 1, i32* %6, align 4\l  %54 = load i32, i32* %6, align 4\l  store i32 %54, i32* %2, align 4\l  br label %55\l}"];
+	Node0x55ba8ad41230 -> Node0x55ba8ad3e7e0;
+	Node0x55ba8ad3e7e0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#f1ccb870",label="{%55:\l55:                                               \l  %56 = load i32, i32* %2, align 4\l  ret i32 %56\l}"];
+}

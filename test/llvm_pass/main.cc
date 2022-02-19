@@ -204,6 +204,7 @@ private:
             fprintf(stdout, "\tReturn type: %s\n", raw.str().data());
         }
         // 5)
+        // https://stackoverflow.com/questions/35370195/llvm-difference-between-uses-and-user-in-instruction-or-value-classes
         // What is using this instruction?
         // function is a Value and has its Users (instructions)
         // users() returns iterator_range< const_user_iterator >
@@ -238,6 +239,8 @@ private:
 };
 
 char EnumFunctions::ID = 0;
+
+// https://www.programiz.com/dsa/graph-adjacency-list
 
 // Code written here uses so-called Legacy Passes (old version)
 // When the code analyzes an IR file it goes strictly from top to bottom (bear that in mind)

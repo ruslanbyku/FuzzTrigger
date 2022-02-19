@@ -1,0 +1,3 @@
+#!/bin/bash
+
+opt -dot-cfg ../test_main.ll -disable-output -enable-new-pm=0

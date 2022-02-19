@@ -8,56 +8,53 @@ struct Argument;
 
 struct Module {
     explicit Module();
-    ~Module() = default;
-    // Explicitly disable copy and move constructors for now;
-    Module(const Module&) = delete;
+    ~Module()                        = default;
+    Module(const Module&)            = delete;
     Module& operator=(const Module&) = delete;
-    Module(Module&&) = delete;
-    Module& operator=(Module&&) = delete;
+    Module(Module&&)                 = delete;
+    Module& operator=(Module&&)      = delete;
 
     std::shared_ptr<StructType> GetStructByName(const std::string&) const;
 
-    std::string name_;
-    std::string source_name_;
+    std::string                              name_;
+    std::string                              source_name_;
 
     // Definition of structs
-    std::set<std::string> struct_list_;
+    std::set<std::string>                    struct_list_;
     std::vector<std::shared_ptr<StructType>> structs_;
 
-    // Definition of functions
-    uint64_t functions_number_; // external + internal
-    std::vector<std::unique_ptr<Function>> functions_;
+    // Definition of functions (external + internal)
+    uint64_t                                 functions_number_;
+    std::vector<std::unique_ptr<Function>>   functions_;
 };
 
 struct Function {
     explicit Function();
-    ~Function() = default;
-    // Explicitly disable copy and move constructors for now;
-    Function(const Function&) = delete;
+    ~Function()                          = default;
+    Function(const Function&)            = delete;
     Function& operator=(const Function&) = delete;
-    Function(Function&&) = delete;
-    Function& operator=(Function&&) = delete;
+    Function(Function&&)                 = delete;
+    Function& operator=(Function&&)      = delete;
 
-    std::string name_;
-    bool arguments_fixed_;
-    std::unique_ptr<Type> return_type_;
-    bool is_local_;
+    std::string                            name_;
+    bool                                   arguments_fixed_;
+    std::unique_ptr<Type>                  return_type_;
+    bool                                   is_local_;
 
     // Definition of arguments
-    uint16_t arguments_number_;
+    uint16_t                               arguments_number_;
     std::vector<std::unique_ptr<Argument>> arguments_;
 };
 
 struct Argument {
     explicit Argument();
-    ~Argument() = default;
-    // Explicitly disable copy and move constructors for now;
-    Argument(const Argument&) = delete;
+    ~Argument()                          = default;
+    Argument(const Argument&)            = delete;
     Argument& operator=(const Argument&) = delete;
-    Argument(Argument&&) = delete;
-    Argument& operator=(Argument&&) = delete;
+    Argument(Argument&&)                 = delete;
+    Argument& operator=(Argument&&)      = delete;
 
-    uint16_t index_;
+    uint16_t              index_;
     std::unique_ptr<Type> type_;
 };
 
