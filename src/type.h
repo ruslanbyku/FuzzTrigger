@@ -32,7 +32,7 @@ enum BaseType : uint8_t {
 struct Type {
     explicit Type() : base_type_(TYPE_UNKNOWN), pointer_depth_(0),
     allocation_size_(0) {}
-    ~Type()                      = default;
+    virtual ~Type()              = default;
     Type(const Type&)            = delete;
     Type& operator=(const Type&) = delete;
     Type(Type&&)                 = delete;
@@ -69,7 +69,7 @@ using Content = std::variant<std::shared_ptr<StructType>,
 
 struct StructType : public Type {
     explicit StructType() : Type(), is_original_(true)  {}
-    ~StructType()                            = default;
+    ~StructType() override                   = default;
     StructType(const StructType&)            = delete;
     StructType& operator=(const StructType&) = delete;
     StructType(StructType&&)                 = delete;
@@ -85,7 +85,7 @@ struct StructType : public Type {
 // ------------------------------------------------------------------------- //
 struct FunctionType : public Type {
     explicit FunctionType() : Type() {}
-    ~FunctionType()                              = default;
+    ~FunctionType() override                     = default;
     FunctionType(const FunctionType&)            = delete;
     FunctionType& operator=(const FunctionType&) = delete;
     FunctionType(FunctionType&&)                 = delete;

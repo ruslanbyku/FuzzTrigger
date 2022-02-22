@@ -37,10 +37,6 @@ const AdjacencyList& CFG::GetAdjacencyList() const {
     return adjacency_list_;
 }
 
-std::string CFG::GetFunctionName() const {
-    return function_.getName().str();
-}
-
 const Vertex& CFG::GetVertexByBlock(const llvm::BasicBlock* basic_block) {
     //TODO: resolve the situation when there is no particular object
     for (auto& map_: adjacency_list_) {

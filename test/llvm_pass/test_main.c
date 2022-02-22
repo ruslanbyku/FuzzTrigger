@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #define LINE_MAX_LEN 36
 
@@ -72,11 +73,56 @@ int* initialize_array(int number_of_bytes) {
 }
 
 void print_characters(char characters[3]) {
+    struct A* collection = initialize_struct();
+    int* array = initialize_array(10);
+    free(collection);
+    free(array);
+
     printf("%c%c%c\n", *characters, *(characters + 1), *(characters + 2));
 }
 
 //
+
 //
+// NIST CWE 119, Example 2 (https://cwe.mitre.org/data/definitions/119.html)
+//
+// Payload: &&&&&&&&&
+char *copy_input(char *user_supplied_string){
+#define MAX_SIZE 10
+    int i, dst_index;
+    char *dst_buf = (char*)malloc(4 * sizeof(char) * MAX_SIZE);
+    if ( MAX_SIZE <= strlen(user_supplied_string) ) {
+        printf("user string too long, die evil hacker!");
+        exit(1);
+        //die("user string too long, die evil hacker!");
+    }
+    dst_index = 0;
+    for ( i = 0; i < strlen(user_supplied_string); i++ ){
+        if ( '&' == user_supplied_string[i] ) {
+            dst_buf[dst_index++] = '&';
+            dst_buf[dst_index++] = 'a';
+            dst_buf[dst_index++] = 'm';
+            dst_buf[dst_index++] = 'p';
+            dst_buf[dst_index++] = ';';
+        } else if ('<' == user_supplied_string[i] ) {
+        /* encode to &lt; */
+        } else {
+            dst_buf[dst_index++] = user_supplied_string[i];
+        }
+    }
+
+    return dst_buf;
+}
+//
+
+//
+// NIST CWE 126, Example 3 (https://cwe.mitre.org/data/definitions/119.html)
+//
+void BufferOverRead() {
+    char *items[] = {"boat", "car", "truck", "train"};
+    int index = 10/*GetUntrustedOffset()*/;
+    printf("You selected %s\n", items[index-1]);
+}
 //
 
 //
@@ -133,7 +179,37 @@ int un_init(char* line) {
     return logged_in;
 }
 //
+
 //
+// libcurl vulnerable function (https://habr.com/ru/post/259671/)
+//
+static char* sanitize_cookie_path(const char* cookie_path) {
+    size_t len;
+    char* new_path = strdup(cookie_path);
+    if (!new_path) {
+        return NULL;
+    }
+
+    if (new_path[0] == '\"') {
+        memmove((void *)new_path, (const void*)(new_path + 1), strlen(new_path));
+    }
+    if (new_path[strlen(new_path) - 1] == '\"') {
+        new_path[strlen(new_path) - 1] = 0x0;
+    }
+
+    if (new_path[0] !='/') {
+        free(new_path);
+        new_path = strdup("/");
+        return new_path;
+    }
+
+    len = strlen(new_path);
+    if (1 < len && new_path[len - 1] == '/') {
+        new_path[len - 1] = 0x0;
+    }
+
+    return new_path;
+}
 //
 
 int main(int argc, char** argv) {
@@ -147,15 +223,28 @@ int main(int argc, char** argv) {
     //
     char characters[3] = {'x', 'y', 'z'};
     print_characters(characters);
-    struct A* collection = initialize_struct();
-    int* array = initialize_array(10);
-    free(collection);
-    free(array);
-    //
-    //
     //
 
+    //
+    // NIST BO
+    //
+    char* vuln_payload = "&&&&&&&&&";
+    copy_input(vuln_payload);
+    //+
+    BufferOverRead();
+    //
+
+    //
+    // Main code with a vulnerable function (BO)
+    //
     un_init(argv[1]);
+    //
+
+    //
+    //
+    //
+    sanitize_cookie_path('\"');
+    //
 
     return 0;
 }

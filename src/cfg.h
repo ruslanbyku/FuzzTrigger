@@ -58,7 +58,6 @@ public:
     // --------------------------------------------------------------------- //
     const llvm::Function& GetFunction() const;
     const AdjacencyList& GetAdjacencyList() const;
-    std::string GetFunctionName() const;
 
 private:
     const llvm::Function& function_;

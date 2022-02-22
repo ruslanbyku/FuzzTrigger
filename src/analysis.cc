@@ -74,20 +74,6 @@ bool Analysis::runOnModule(llvm::Module& module) {
     module_dump_->name_ = module.getModuleIdentifier();
     // Copy module corresponding source file
     module_dump_->source_name_ = module.getSourceFileName();
-
-    // --------------------------------------------------------------------- //
-    //                          Dump global structs                          //
-    // --------------------------------------------------------------------- //
-    DumpModuleStructs();
-
-    // --------------------------------------------------------------------- //
-    //                            Construct CFGs                             //
-    // --------------------------------------------------------------------- //
-    MakeControlFlowGraph(*GetRootFunction());
-
-    // --------------------------------------------------------------------- //
-    //                         Dump module functions                         //
-    // --------------------------------------------------------------------- //
     // Get number of functions
     module_dump_->functions_number_ = module.getFunctionList().size();
 
@@ -99,6 +85,29 @@ bool Analysis::runOnModule(llvm::Module& module) {
         return false;
     }
 
+    // --------------------------------------------------------------------- //
+    //                            Construct CFGs                             //
+    // --------------------------------------------------------------------- //
+    root_function_ = GetRootFunction();
+    if (!root_function_) {
+        success_ = false;
+
+        return false;
+    }
+
+    MakeControlFlowGraph(*root_function_);
+    FindStandaloneFunctions();
+
+    // --------------------------------------------------------------------- //
+    //                          Dump global structs                          //
+    // --------------------------------------------------------------------- //
+    //DumpModuleStructs();
+
+    // --------------------------------------------------------------------- //
+    //                         Dump module functions                         //
+    // --------------------------------------------------------------------- //
+
+    /*
     // Allocate space in vector for all functions
     module_dump_->functions_.reserve(module_dump_->functions_number_);
     // Iterate over module's functions
@@ -111,7 +120,7 @@ bool Analysis::runOnModule(llvm::Module& module) {
         // Append the dumped function to the vector of module functions
         module_dump_->functions_.push_back(std::move(function_dump));
     }
-
+    */
 
     // The module has not been modified, then return false
     return false;
@@ -152,7 +161,7 @@ std::unique_ptr<Function>
     std::unique_ptr<Function> function_dump = std::make_unique<Function>();
 
     // Fetch general function data
-    function_dump->name_ = function.getName().data();
+    function_dump->name_ = function.getName().str();
     function_dump->arguments_number_ =
             static_cast<uint16_t>(function.arg_size());
     function_dump->arguments_fixed_ = function.isVarArg();
@@ -542,4 +551,41 @@ void Analysis::MakeControlFlowGraph(const llvm::Function& function) {
             bb_queue.push(successor);
         }
     }
+}
+
+void Analysis::FindStandaloneFunctions() {
+    std::set<const llvm::Function*> dependant_functions;
+
+    // Find all dependant functions
+    // A dependant function is a function that calls other in-module functions
+    // inside itself
+    for (std::unique_ptr<CFG>& cfg: module_cfg_) {
+        const llvm::Function* function = &cfg->GetFunction();
+
+        // Find all instructions in the module that call the function
+        for (const llvm::User* user: function->users()) {
+            if (const llvm::Instruction* instruction =
+                    llvm::dyn_cast<llvm::Instruction>(user)) {
+                // Get the function which the instruction belongs to
+                const llvm::Function* parent = instruction->getFunction();
+
+                if (dependant_functions.contains(parent)) {
+                    continue;
+                }
+
+                dependant_functions.insert(parent);
+            }
+        }
+    }
+
+    // Filter standalone functions
+    for (std::unique_ptr<CFG>& cfg: module_cfg_) {
+        const llvm::Function* function = &cfg->GetFunction();
+        bool result = dependant_functions.contains(function);
+
+        if (!result) {
+            standalone_functions_.insert(function);
+        }
+    }
+
 }

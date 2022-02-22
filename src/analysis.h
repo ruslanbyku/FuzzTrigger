@@ -63,10 +63,13 @@ private:
     std::unique_ptr<llvm::DataLayout> data_layout_;
     // An object for dump of an IR from the memory
     std::unique_ptr<Module>           module_dump_;
+    // A function that calls every function in the module
+    const llvm::Function*             root_function_;
     // CFG of module functions
     // The order of objects in the container is the order of how functions
     // are called in the module
     std::vector<std::unique_ptr<CFG>> module_cfg_;
+    std::set<const llvm::Function*>   standalone_functions_;
 
     void LaunchPassOnIRModule(std::string&&);
     void DumpModuleStructs();
@@ -79,6 +82,7 @@ private:
 
     const llvm::Function* GetRootFunction() const;
     void MakeControlFlowGraph(const llvm::Function&);
+    void FindStandaloneFunctions();
 };
 
 #endif //AUTOFUZZ_ANALYSIS_H
