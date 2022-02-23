@@ -25,8 +25,7 @@ set(SOURCES
         src/analysis.h
         src/type.h
         src/cfg.h
-        src/cfg.cc
-        )
+        src/pass_launcher.h)
 
 #
 # Compilation flags

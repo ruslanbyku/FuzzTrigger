@@ -2,11 +2,9 @@
 
 char Analysis::ID = 0;
 
-Analysis::Analysis(std::string ir_module)
+Analysis::Analysis()
 : llvm::ModulePass(ID), success_(false), module_(nullptr),
-module_dump_(nullptr) {
-    LaunchPassOnIRModule(std::move(ir_module));
-}
+module_dump_(nullptr) {}
 
 Analysis::operator bool() const {
     return success_;
@@ -18,34 +16,6 @@ std::unique_ptr<Module> Analysis::GetModuleDump() {
     }
 
     return std::move(module_dump_);
-}
-
-// ------------------------------------------------------------------------- //
-//                              Load IR file                                 //
-// ------------------------------------------------------------------------- //
-void Analysis::LaunchPassOnIRModule(std::string&& ir_module) {
-    llvm::SMDiagnostic error;
-    llvm::LLVMContext context;
-
-    // Load IR text representation into memory
-    std::unique_ptr<llvm::Module> module(
-            llvm::parseIRFile(ir_module, error, context));
-    if (!module) {
-        fprintf(stderr, "Could not open [%s]\n", ir_module.c_str());
-        success_ = false;
-        return;
-    }
-
-    // Tell the pass that analysis operations (CallGraph) will be done further
-    llvm::PassRegistry* passReg = llvm::PassRegistry::getPassRegistry();
-    llvm::initializeAnalysis(*passReg);
-
-    // Register the pass and run it
-    llvm::legacy::PassManager pass_manager;
-    pass_manager.add(this);
-    pass_manager.run(*module);
-
-    success_ = true;
 }
 
 void Analysis::getAnalysisUsage(llvm::AnalysisUsage& analysis_usage) const {}
@@ -96,7 +66,7 @@ bool Analysis::runOnModule(llvm::Module& module) {
     }
 
     MakeControlFlowGraph(*root_function_);
-    FindStandaloneFunctions();
+    FindStandaloneFunctions(module_cfg_);
 
     // --------------------------------------------------------------------- //
     //                          Dump global structs                          //
@@ -485,25 +455,58 @@ const llvm::Function* Analysis::GetRootFunction() const {
 // 5. As a result the array of CFG objects is filled in the order of how
 // functions are called in the module.
 //
-void Analysis::MakeControlFlowGraph(const llvm::Function& function) {
+uint32_t Analysis::MakeControlFlowGraph(const llvm::Function& function,
+                                    const llvm::Function* parent,
+                                    uint32_t function_id) {
     // Check if the function has a body
     if (function.empty()) {
         // It does not
-        return;
+        return function_id;
     }
 
+    // --------------------------------------------------------------------- //
+    //                             Function CFG                              //
+    // --------------------------------------------------------------------- //
+    // Create a new CFG object if it is empty
+    if (!module_cfg_) {
+        module_cfg_ = std::make_unique<FunctionCFG>();
+    }
+
+    auto module_cfg = static_cast<FunctionCFG*>(module_cfg_.get());
+
+    // Recursion prevention
+    // If the function calls itself or if a vertex for a called function
+    // already exists
+    if (&function == parent || module_cfg->GetVertexByObject(&function)) {
+        module_cfg->AddEdge(parent, &function);
+
+        return function_id;
+    }
+
+    module_cfg->AddVertex(function_id, &function);
+    ++function_id;
+
+    // Skip root function
+    if (parent) {
+        module_cfg->AddEdge(parent, &function);
+    }
+
+    // --------------------------------------------------------------------- //
+    //                            Basic Block CFG                            //
+    // --------------------------------------------------------------------- //
     const llvm::BasicBlock* entry_block   = &function.getEntryBlock();
     std::queue<const llvm::BasicBlock*>     bb_queue;
     std::map<const llvm::BasicBlock*, bool> visited;
     uint32_t                                block_id = 0;
 
-    // Add new CFG object for further analysis
-    module_cfg_.emplace_back(std::make_unique<CFG>(function));
-    CFG* cfg = module_cfg_.back().get();
+    // Create a new CFG object for functions' basic blocks
+    functions_cfg_.emplace_back(std::make_unique<BasicBlockCFG>(function));
+    auto function_cfg =
+            static_cast<BasicBlockCFG*>(functions_cfg_.back().get());
 
     // Create/initialize all vertices for the adjacency list
     for (auto& basic_block: function.getBasicBlockList()) {
-        cfg->AddVertex(block_id, &basic_block);
+        function_cfg->AddVertex(block_id, &basic_block);
         ++block_id;
     }
 
@@ -514,6 +517,9 @@ void Analysis::MakeControlFlowGraph(const llvm::Function& function) {
     // Start processing vertices until there is no left
     while (!bb_queue.empty()) {
         const llvm::BasicBlock* block = bb_queue.front();
+        if (!block) {
+            continue;
+        }
         bb_queue.pop();
 
         // Enter the basic block and search for call instructions
@@ -527,7 +533,8 @@ void Analysis::MakeControlFlowGraph(const llvm::Function& function) {
                 }
 
                 // Recursively construct a new CFG for a new function
-                MakeControlFlowGraph(*callee);
+                function_id =
+                        MakeControlFlowGraph(*callee, &function, function_id);
             }
         }
 
@@ -537,7 +544,7 @@ void Analysis::MakeControlFlowGraph(const llvm::Function& function) {
             const llvm::BasicBlock* successor = terminator->getSuccessor(idx);
 
             // A neighboring vertex is found, it can form an edge
-            cfg->AddEdge(block, successor);
+            function_cfg->AddEdge(block, successor);
 
             // If all neighbors of the vertex has been previously found, then
             // do not process it again
@@ -551,41 +558,22 @@ void Analysis::MakeControlFlowGraph(const llvm::Function& function) {
             bb_queue.push(successor);
         }
     }
+
+    return function_id;
 }
 
-void Analysis::FindStandaloneFunctions() {
-    std::set<const llvm::Function*> dependant_functions;
+void Analysis::FindStandaloneFunctions(FunctionCFGPtr& module_cfg) {
+    const AdjacencyList& adjacency_list = module_cfg->GetAdjacencyList();
 
-    // Find all dependant functions
-    // A dependant function is a function that calls other in-module functions
-    // inside itself
-    for (std::unique_ptr<CFG>& cfg: module_cfg_) {
-        const llvm::Function* function = &cfg->GetFunction();
-
-        // Find all instructions in the module that call the function
-        for (const llvm::User* user: function->users()) {
-            if (const llvm::Instruction* instruction =
-                    llvm::dyn_cast<llvm::Instruction>(user)) {
-                // Get the function which the instruction belongs to
-                const llvm::Function* parent = instruction->getFunction();
-
-                if (dependant_functions.contains(parent)) {
-                    continue;
-                }
-
-                dependant_functions.insert(parent);
+    for (const auto& row: adjacency_list) {
+        for (const auto& pair: row) {
+            if (!pair.second.empty()) {
+                break;
             }
+
+            auto vertex_data =
+                    static_cast<VertexData<llvm::Function>*>(pair.first.get());
+            standalone_functions_.insert(vertex_data->object_);
         }
     }
-
-    // Filter standalone functions
-    for (std::unique_ptr<CFG>& cfg: module_cfg_) {
-        const llvm::Function* function = &cfg->GetFunction();
-        bool result = dependant_functions.contains(function);
-
-        if (!result) {
-            standalone_functions_.insert(function);
-        }
-    }
-
 }

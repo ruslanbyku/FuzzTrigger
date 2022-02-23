@@ -314,4 +314,19 @@ struct BasicBlockDef {
 // Where Decl is a declaration of the AST (a variable or a formal parameter)
 
 llvm::DenseMap<llvm::BasicBlock*, BasicBlockDef> current_def;
+
+ const AdjacencyList& functions = functions_cfg_->GetAdjacencyList();
+    for (auto& map_: functions) {
+        for (auto& pair: map_) {
+            auto vertex_data =
+                    static_cast<VertexData<llvm::Function>*>(pair.first.get());
+            llvm::outs() << vertex_data->object_->getName() << "(" << vertex_data->id_ << ")\n";
+            for (auto& node: pair.second) {
+                auto node_data =
+                        static_cast<VertexData<llvm::Function>*>(node.get());
+                llvm::outs() << "\t" << node_data->object_->getName() << "(" << node_data->id_ << ")\n";
+            }
+        }
+    }
+
  */

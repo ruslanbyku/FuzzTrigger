@@ -7,12 +7,7 @@
 #include <queue>
 #include <map>
 
-#include <llvm/Pass.h>
-#include <llvm/PassRegistry.h>
-#include <llvm/InitializePasses.h>
-
 #include <llvm/IR/Module.h>
-#include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/TypeFinder.h>
@@ -27,10 +22,10 @@
 // #include <llvm/Analysis/PostDominators.h>
 #include <llvm/Analysis/CallGraph.h>
 
-#include <llvm/Support/SourceMgr.h>
 // #include <llvm/Support/raw_ostream.h>
 
-#include <llvm/IRReader/IRReader.h>
+using FunctionCFGPtr = std::unique_ptr<CFG<llvm::Function>>;
+using BasicBlockCFGPtr = std::unique_ptr<CFG<llvm::BasicBlock>>;
 
 //
 // Make a full analysis of an IR module
@@ -40,7 +35,7 @@ public:
     static char ID;  // Declare for Pass internal operations
 
     // Receive an IR module file path (.ll)
-    explicit Analysis(std::string);
+    explicit Analysis();
 
     explicit operator bool() const;
     std::unique_ptr<Module> GetModuleDump();
@@ -63,15 +58,18 @@ private:
     std::unique_ptr<llvm::DataLayout> data_layout_;
     // An object for dump of an IR from the memory
     std::unique_ptr<Module>           module_dump_;
+
     // A function that calls every function in the module
     const llvm::Function*             root_function_;
+    //
+    FunctionCFGPtr                    module_cfg_;
     // CFG of module functions
     // The order of objects in the container is the order of how functions
     // are called in the module
-    std::vector<std::unique_ptr<CFG>> module_cfg_;
+    std::vector<BasicBlockCFGPtr>     functions_cfg_;
     std::set<const llvm::Function*>   standalone_functions_;
 
-    void LaunchPassOnIRModule(std::string&&);
+
     void DumpModuleStructs();
     std::unique_ptr<Function> DumpModuleFunction(const llvm::Function&);
     std::unique_ptr<Argument> DumpFunctionArgument(const llvm::Argument&);
@@ -81,8 +79,10 @@ private:
     std::unique_ptr<Type> ResolveStructType(llvm::Type*, llvm::Type*);
 
     const llvm::Function* GetRootFunction() const;
-    void MakeControlFlowGraph(const llvm::Function&);
-    void FindStandaloneFunctions();
+    uint32_t MakeControlFlowGraph(const llvm::Function&,
+                                  const llvm::Function* = nullptr,
+                                  uint32_t = 0);
+    void FindStandaloneFunctions(FunctionCFGPtr& module_cfg);
 };
 
 #endif //AUTOFUZZ_ANALYSIS_H

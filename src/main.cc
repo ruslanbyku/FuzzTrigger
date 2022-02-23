@@ -1,4 +1,4 @@
-#include "analysis.h"
+#include "pass_launcher.h"
 
 #include <cstdio>
 
@@ -9,7 +9,8 @@ int main(int argc, char** argv) {
         fprintf(stderr, "Usage: %s <.ll>", argv[0]);
     }
 
-    Analysis analysis(argv[1]);
+    std::string ir_module(argv[1]);
+    PassLauncher::LaunchOnIRModule(ir_module);
 
     return 0;
 }
