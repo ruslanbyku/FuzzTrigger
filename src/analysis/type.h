@@ -40,7 +40,7 @@ struct Type {
 
     BaseType base_type_;
     uint8_t  pointer_depth_;
-    uint64_t allocation_size_; // allocation size of a type
+    uint64_t allocation_size_; // how many bytes allocated for the type
 };
 
 // ------------------------------------------------------------------------- //

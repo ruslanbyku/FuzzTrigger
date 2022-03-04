@@ -3,6 +3,12 @@
 
 #include "type.h"
 
+enum FunctionLinkage {
+    UNKNOWN_LINKAGE,
+    EXTERNAL_LINKAGE, // Externally visible function
+    INTERNAL_LINKAGE  // Internally visible function (static)
+};
+
 struct Function;
 struct Argument;
 
@@ -14,16 +20,18 @@ struct Module {
     Module(Module&&)                 = delete;
     Module& operator=(Module&&)      = delete;
 
+    explicit operator bool() const;
     std::shared_ptr<StructType> GetStructByName(const std::string&) const;
+
+    bool                                     success_;
 
     std::string                              name_;
     std::string                              source_name_;
 
     // Definition of structs
-    std::set<std::string>                    struct_list_;
     std::vector<std::shared_ptr<StructType>> structs_;
 
-    // Definition of functions (external + internal)
+    // external + internal
     uint64_t                                 functions_number_;
     std::vector<std::unique_ptr<Function>>   functions_;
 };
@@ -37,9 +45,11 @@ struct Function {
     Function& operator=(Function&&)      = delete;
 
     std::string                            name_;
+    FunctionLinkage                        linkage_;
     bool                                   arguments_fixed_;
     std::unique_ptr<Type>                  return_type_;
     bool                                   is_local_;
+    bool                                   is_standalone_;
 
     // Definition of arguments
     uint16_t                               arguments_number_;

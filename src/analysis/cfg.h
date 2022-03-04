@@ -8,28 +8,27 @@
 #include <llvm/IR/Function.h>
 #include <llvm/IR/CFG.h>
 
-struct Vertex {
-    virtual ~Vertex() = default;
+struct IVertex {
+    virtual ~IVertex() = default;
 
     uint32_t id_ = 0;
 };
 
 template <typename T>
-struct VertexData : Vertex {
-    ~VertexData() override = default;
+struct Vertex : IVertex {
+    ~Vertex() override = default;
 
     const T* object_ = nullptr;
 };
 
-using VertexPtr = std::shared_ptr<Vertex>;
+using VertexPtr  = std::shared_ptr<IVertex>;
 using LinkedList = std::vector<VertexPtr>;
-
-using Row = std::map<VertexPtr, LinkedList,
-        decltype([](const VertexPtr& U, const VertexPtr& V) -> bool {
-            return U->id_ < V->id_;
-        })>;
-using AdjacencyList = std::vector<Row>;
-
+struct VertexComparator {
+    bool operator()(const VertexPtr& U, const VertexPtr& V) const {
+        return U->id_ < V->id_;
+    }
+};
+using AdjacencyList = std::map<VertexPtr, LinkedList, VertexComparator>;
 
 template <typename T>
 class CFG {
@@ -44,18 +43,13 @@ public:
     // Add new node (vertex) to the adjacency list
     // This method is called to initialize (find) all vertices in the function
     void AddVertex(uint32_t id, const T* object) {
-        VertexPtr vertex     = std::make_shared<VertexData<T>>();
-        auto vertex_data     = static_cast<VertexData<T>*>(vertex.get());
+        VertexPtr vertex     = std::make_shared<Vertex<T>>();
+        auto vertex_data     = static_cast<Vertex<T>*>(vertex.get());
+
         vertex_data->id_     = id;
         vertex_data->object_ = object;
 
-        // If there is a shortage in rows, append a new one
-        bool has_row = id < adjacency_list_.size();
-        if (!has_row) {
-            InitializeRow();
-        }
-
-        adjacency_list_[id][std::move(vertex)];
+        adjacency_list_[std::move(vertex)];
     }
 
     // Add new edge E(u, v) to the adjacency list
@@ -71,17 +65,14 @@ public:
             return;
         }
 
-        adjacency_list_[U->id_][U].push_back(V);
+        adjacency_list_[U].push_back(V);
     }
 
     VertexPtr GetVertexByObject(const T* object) const {
-        for (const auto& row: adjacency_list_) {
-            for (const auto& pair: row) {
-                const auto vertex_data =
-                        static_cast<VertexData<T>*>(pair.first.get());
-                if (vertex_data->object_ == object) {
-                    return pair.first;
-                }
+        for (const auto& pair: adjacency_list_) {
+            const auto vertex = static_cast<Vertex<T>*>(pair.first.get());
+            if (vertex->object_ == object) {
+                return pair.first;
             }
         }
 
@@ -92,31 +83,14 @@ public:
         return adjacency_list_;
     }
 
-protected:
-    AdjacencyList adjacency_list_;
-
 private:
-    inline void InitializeRow() {
-        adjacency_list_.emplace_back(Row());
-    }
-
+    AdjacencyList adjacency_list_;
 };
 
 class BasicBlockCFG : public CFG<llvm::BasicBlock> {
 public:
     explicit BasicBlockCFG(const llvm::Function& function)
-               : BasicBlockCFG(function, function.getBasicBlockList().size()) {}
-    explicit BasicBlockCFG(const llvm::Function& function,
-                           uint64_t blocks_number)
-                               : CFG<llvm::BasicBlock>(), function_(function) {
-        // Reserve space for each basic block - vertex
-        adjacency_list_.reserve(blocks_number);
-
-        // Initialize adjacency list for vertices
-        for (uint64_t idx = 0; idx < blocks_number; ++idx) {
-            adjacency_list_.emplace_back(Row());
-        }
-    }
+                               : CFG<llvm::BasicBlock>(), function_(function) {}
 
     ~BasicBlockCFG() override                      = default;
     BasicBlockCFG(const BasicBlockCFG&)            = delete;

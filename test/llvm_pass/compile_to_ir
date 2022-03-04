@@ -9,4 +9,4 @@
 # 2) Ditching the vulnerable pieces of code
 #
 
-clang -emit-llvm test_main.c -S -o test_main.ll
+clang -emit-llvm test_main.c -S -o test_main.ll > /dev/null 2>&1

@@ -2,23 +2,9 @@
 
 char Analysis::ID = 0;
 
-Analysis::Analysis()
-: llvm::ModulePass(ID), success_(false), module_(nullptr),
-module_dump_(nullptr) {}
+Analysis::Analysis(std::unique_ptr<Module>& module_dump)
+: llvm::ModulePass(ID), module_dump_(module_dump) {}
 
-Analysis::operator bool() const {
-    return success_;
-}
-
-std::unique_ptr<Module> Analysis::GetModuleDump() {
-    if (!module_dump_) {
-        return nullptr;
-    }
-
-    return std::move(module_dump_);
-}
-
-void Analysis::getAnalysisUsage(llvm::AnalysisUsage& analysis_usage) const {}
 
 llvm::StringRef Analysis::getPassName() const {
     return "ModuleAnalysis";
@@ -29,89 +15,132 @@ llvm::StringRef Analysis::getPassName() const {
 // ------------------------------------------------------------------------- //
 bool Analysis::runOnModule(llvm::Module& module) {
     // --------------------------------------------------------------------- //
-    //                 Initialize class attributes (important)               //
+    //                 Prepare module's auxiliary information                //
     // --------------------------------------------------------------------- //
-    // Initialize global module for further application
-    module_ = &module;
     data_layout_ = std::make_unique<llvm::DataLayout>(&module);
 
     // --------------------------------------------------------------------- //
-    //                        Dump module (important)                        //
+    //                        Dump the whole module                          //
     // --------------------------------------------------------------------- //
-    // Start dumping the module
-    module_dump_ = std::make_unique<Module>();
-    // Copy module name
-    module_dump_->name_ = module.getModuleIdentifier();
-    // Copy module corresponding source file
-    module_dump_->source_name_ = module.getSourceFileName();
-    // Get number of functions
-    module_dump_->functions_number_ = module.getFunctionList().size();
-
-    // Check if there are functions in the module
-    if (module_dump_->functions_number_ == 0) {
-        // There are no functions in the module, quit
-        success_ = false;
-
-        return false;
-    }
-
-    // --------------------------------------------------------------------- //
-    //                            Construct CFGs                             //
-    // --------------------------------------------------------------------- //
-    root_function_ = GetRootFunction();
-    if (!root_function_) {
-        success_ = false;
-
-        return false;
-    }
-
-    MakeControlFlowGraph(*root_function_);
-    FindStandaloneFunctions(module_cfg_);
-
-    // --------------------------------------------------------------------- //
-    //                          Dump global structs                          //
-    // --------------------------------------------------------------------- //
-    //DumpModuleStructs();
-
-    // --------------------------------------------------------------------- //
-    //                         Dump module functions                         //
-    // --------------------------------------------------------------------- //
-
-    /*
-    // Allocate space in vector for all functions
-    module_dump_->functions_.reserve(module_dump_->functions_number_);
-    // Iterate over module's functions
-    for (llvm::Module::const_iterator ii = module.begin();
-         ii != module.end(); ++ii) {
-        const llvm::Function& function = *ii;
-
-        std::unique_ptr<Function> function_dump = DumpModuleFunction(function);
-
-        // Append the dumped function to the vector of module functions
-        module_dump_->functions_.push_back(std::move(function_dump));
-    }
-    */
+    DumpModule(module);
 
     // The module has not been modified, then return false
     return false;
 }
 
-void Analysis::DumpModuleStructs() {
-    // Find all module structs
+void Analysis::DumpModule(llvm::Module& module) {
+    bool result;
+
+    // Dump module name
+    module_dump_->name_             = module.getModuleIdentifier();
+    // Dump module corresponding source file
+    module_dump_->source_name_      = module.getSourceFileName();
+    // Dump number of functions
+    module_dump_->functions_number_ = module.getFunctionList().size();
+
+    // --------------------------------------------------------------------- //
+    //                      Check module's legitimacy                        //
+    // --------------------------------------------------------------------- //
+    result = IsModuleLegit(module_dump_->source_name_,
+                                               module_dump_->functions_number_);
+    if (!result) {
+        // The module structure is not acceptable
+        module_dump_->success_ = result;
+
+        return;
+    }
+
+    // --------------------------------------------------------------------- //
+    //                          Dump module structs                          //
+    // --------------------------------------------------------------------- //
+    DumpModuleStructs(module);
+
+    // --------------------------------------------------------------------- //
+    //                          Dump module globals                          //
+    // --------------------------------------------------------------------- //
+    //TODO: Dump module globals
+
+    // --------------------------------------------------------------------- //
+    //                            Construct CFGs                             //
+    // --------------------------------------------------------------------- //
+    result = TraverseModule(module);
+    if (!result) {
+        // Can not traverse the module
+        module_dump_->success_ = result;
+
+        return;
+    }
+
+    // --------------------------------------------------------------------- //
+    //                         Dump module functions                         //
+    // --------------------------------------------------------------------- //
+    // Dump local functions
+    result = DumpModuleFunctions(module, functions_cfg_);
+    if (!result) {
+        // There are no standalone functions, abort
+        module_dump_->success_ = result;
+
+        return;
+    }
+
+    // Analysis went successful, module dump is complete
+    module_dump_->success_ = true;
+}
+
+bool Analysis::IsModuleLegit(const std::string& source_name,
+                                             uint64_t functions_number) const {
+    // Check if the source file were passed
+    if (source_name.empty()) {
+        // Can not identify the corresponding source file
+        return false;
+    }
+
+    // Check if there are functions in the module
+    if (functions_number == 0) {
+        // There are no functions in the module, quit
+        return false;
+    }
+
+    return true;
+}
+
+bool Analysis::TraverseModule(llvm::Module& module) {
+    // A root function calls every function in the module, it is an entry
+    // point to the program
+    const llvm::Function* root_function = GetRootFunction(module);
+    if (!root_function) {
+        // No root function, do not know how to traverse the module, quit
+        return false;
+    }
+
+    MakeControlFlowGraph(*root_function);
+    //PrintCFG();
+
+    return true;
+}
+
+void Analysis::DumpModuleStructs(llvm::Module& module) {
     std::vector<llvm::StructType*> module_structs =
-            module_->getIdentifiedStructTypes();
+                                              module.getIdentifiedStructTypes();
+
+    // Check if structs are present in the module
+    uint64_t structs_number = module_structs.size();
+    if (structs_number == 0) {
+        // There are no structs in the module, non a problem
+        return;
+    }
+
+    // Allocate space in vector for module structs
+    module_dump_->structs_.reserve(structs_number);
+    // In regard to the LLVM IR struct representation, it is better to
+    // analyze them from the end. So reverse them and start the analysis.
     std::ranges::reverse(module_structs);
 
-    // Allocate space in vector for all structs
-    uint64_t structs_number = module_structs.size();
-    module_dump_->structs_.reserve(structs_number);
-
     // Iterate over module structs in reverse order
-    for (auto struct_type : module_structs) {
+    for (auto struct_type: module_structs) {
 
         // Dump a struct
-        std::unique_ptr<Type> type_dump =
-                ResolveValueType(struct_type);
+        std::unique_ptr<Type> type_dump = ResolveValueType(struct_type);
 
         // Cast Type to StructType as we are sure, that there is a StructType
         // object beneath.
@@ -124,10 +153,45 @@ void Analysis::DumpModuleStructs() {
     }
 }
 
-std::unique_ptr<Function>
-        Analysis::DumpModuleFunction(const llvm::Function& function) {
-    llvm::Type* return_type;
+bool Analysis::DumpModuleFunctions(llvm::Module& module,
+                                   const FunctionCFGPtr& module_cfg) {
+    const AdjacencyList& adjacency_list = module_cfg->GetAdjacencyList();
 
+    // Local module functions (external are discarded)
+    uint64_t functions_number = adjacency_list.size();
+    // Check if the adjacency list is empty
+    if (functions_number == 0) {
+        // Although it is impossible, at least root function is present
+        return false;
+    }
+
+    // Find non-dependant functions (from other functions or global values)
+    FindStandaloneFunctions(module, adjacency_list);
+    if (standalone_functions_.empty()) {
+        // There are no sought functions, abort the analysis
+        return false;
+    }
+
+    // Allocate space in vector for all functions
+    module_dump_->functions_.reserve(functions_number);
+
+    // Iterate over module's local functions and dump them
+    for (const auto& pair: adjacency_list) {
+        auto vertex = static_cast<Vertex<llvm::Function>*>(pair.first.get());
+        const llvm::Function& function = *vertex->object_;
+
+        std::unique_ptr<Function> function_dump = DumpSingleFunction(function);
+
+        // Append the dumped function to the vector of module functions
+        module_dump_->functions_.push_back(std::move(function_dump));
+    }
+
+    return true;
+}
+
+std::unique_ptr<Function>
+        Analysis::DumpSingleFunction(const llvm::Function& function) {
+    llvm::Type* return_type;
     std::unique_ptr<Function> function_dump = std::make_unique<Function>();
 
     // Fetch general function data
@@ -137,38 +201,63 @@ std::unique_ptr<Function>
     function_dump->arguments_fixed_ = function.isVarArg();
     return_type = function.getReturnType();
     function_dump->return_type_ = ResolveValueType(return_type);
-    function_dump->is_local_ = !function.isDeclaration();
+    //function_dump->is_local_ = !function.isDeclaration();
+    function_dump->is_standalone_ = IsStandalone(function);
+    function_dump->linkage_ = GetFunctionLinkage(function.getLinkage());
 
     // --------------------------------------------------------------------- //
     //                       Dump function arguments                         //
     // --------------------------------------------------------------------- //
-    // Allocate space in vector for function arguments
-    function_dump->arguments_.reserve(function_dump->arguments_number_);
-    // Iterate over function's arguments
-    for (llvm::Function::const_arg_iterator ii = function.arg_begin();
-                                            ii != function.arg_end(); ++ii) {
-        const llvm::Argument& argument = *ii;
-        std::unique_ptr<Argument> argument_dump = DumpFunctionArgument(argument);
-
-        // Append the dumped argument to the vector of function arguments
-        function_dump->arguments_.push_back(std::move(argument_dump));
-    }
-
-    // Iterate over function's instructions
-    for (const llvm::Instruction& instruction :
-                                          llvm::instructions(&function)) {
-        if (auto ret_instruction =
-                llvm::dyn_cast<llvm::ReturnInst>(&instruction)) {
-
-        }
-        break;
-    }
+    DumpFunctionArguments(function, function_dump);
 
     return function_dump;
 }
 
+FunctionLinkage Analysis::GetFunctionLinkage(
+                           llvm::GlobalValue::LinkageTypes linkage_type) const {
+    FunctionLinkage function_linkage;
+
+    switch (linkage_type) {
+        case llvm::GlobalValue::LinkageTypes::ExternalLinkage:
+            function_linkage = EXTERNAL_LINKAGE;
+            break;
+        case llvm::GlobalValue::LinkageTypes::InternalLinkage:
+            function_linkage = INTERNAL_LINKAGE;
+            break;
+        default:
+            function_linkage = UNKNOWN_LINKAGE;
+            break;
+
+    }
+
+    return function_linkage;
+}
+
+
+void Analysis::DumpFunctionArguments(const llvm::Function& function,
+                                     std::unique_ptr<Function>& function_dump) {
+    // Check if the current function has arguments
+    if (function_dump->arguments_number_ == 0) {
+        // There are no arguments in the current function, not a problem
+        return;
+    }
+
+    // Allocate space in vector for function arguments
+    function_dump->arguments_.reserve(function_dump->arguments_number_);
+
+    // Iterate over function's arguments
+    for (llvm::Function::const_arg_iterator ii = function.arg_begin();
+                                            ii != function.arg_end(); ++ii) {
+        const llvm::Argument& argument = *ii;
+        std::unique_ptr<Argument> argument_dump = DumpSingleArgument(argument);
+
+        // Append the dumped argument to the vector of function arguments
+        function_dump->arguments_.push_back(std::move(argument_dump));
+    }
+}
+
 std::unique_ptr<Argument>
-        Analysis::DumpFunctionArgument(const llvm::Argument& argument) {
+        Analysis::DumpSingleArgument(const llvm::Argument& argument) {
     std::unique_ptr<Argument> argument_dump = std::make_unique<Argument>();
     llvm::Type* argument_type;
 
@@ -196,8 +285,6 @@ std::unique_ptr<Type> Analysis::ResolveValueType(llvm::Type* data_type) {
 
         type_dump = std::make_unique<Type>();
         type_dump->base_type_ = TYPE_VOID;
-        type_dump->allocation_size_ =
-                data_layout_->getTypeAllocSize(data_type);
 
     } else if (base_type->isIntegerTy()) {
 
@@ -334,7 +421,7 @@ std::unique_ptr<Type> Analysis::ResolveStructType(llvm::Type* data_type,
     //                        Resolve a hollow struct                        //
     // --------------------------------------------------------------------- //
     // Determine whether the struct has been already registered
-    if (module_dump_->struct_list_.contains(struct_dump->name_)) {
+    if (visited_structs_.contains(struct_dump->name_)) {
         // The struct already exists
         // The current struct will be a link to the original one (with the
         // body/definition)
@@ -358,7 +445,7 @@ std::unique_ptr<Type> Analysis::ResolveStructType(llvm::Type* data_type,
         return type_dump;
 
     } else {  // This struct does not exist, register a new entry
-        module_dump_->struct_list_.insert(struct_dump->name_);
+        visited_structs_.insert(struct_dump->name_);
     }
 
     // --------------------------------------------------------------------- //
@@ -423,8 +510,8 @@ std::unique_ptr<Type> Analysis::ResolveStructType(llvm::Type* data_type,
 //
 // Root function is a function that calls every other function in the module
 //
-const llvm::Function* Analysis::GetRootFunction() const {
-    llvm::CallGraph call_graph(*module_);
+const llvm::Function* Analysis::GetRootFunction(llvm::Module& module) const {
+    llvm::CallGraph call_graph(module);
 
     // Enumerate all functions in the module
     for (auto& ii: call_graph) {
@@ -468,11 +555,11 @@ uint32_t Analysis::MakeControlFlowGraph(const llvm::Function& function,
     //                             Function CFG                              //
     // --------------------------------------------------------------------- //
     // Create a new CFG object if it is empty
-    if (!module_cfg_) {
-        module_cfg_ = std::make_unique<FunctionCFG>();
+    if (!functions_cfg_) {
+        functions_cfg_ = std::make_unique<FunctionCFG>();
     }
 
-    auto module_cfg = static_cast<FunctionCFG*>(module_cfg_.get());
+    auto module_cfg = static_cast<FunctionCFG*>(functions_cfg_.get());
 
     // Recursion prevention
     // If the function calls itself or if a vertex for a called function
@@ -500,9 +587,9 @@ uint32_t Analysis::MakeControlFlowGraph(const llvm::Function& function,
     uint32_t                                block_id = 0;
 
     // Create a new CFG object for functions' basic blocks
-    functions_cfg_.emplace_back(std::make_unique<BasicBlockCFG>(function));
+    bblocks_cfg_.emplace_back(std::make_unique<BasicBlockCFG>(function));
     auto function_cfg =
-            static_cast<BasicBlockCFG*>(functions_cfg_.back().get());
+            static_cast<BasicBlockCFG*>(bblocks_cfg_.back().get());
 
     // Create/initialize all vertices for the adjacency list
     for (auto& basic_block: function.getBasicBlockList()) {
@@ -562,18 +649,102 @@ uint32_t Analysis::MakeControlFlowGraph(const llvm::Function& function,
     return function_id;
 }
 
-void Analysis::FindStandaloneFunctions(FunctionCFGPtr& module_cfg) {
-    const AdjacencyList& adjacency_list = module_cfg->GetAdjacencyList();
+void Analysis::PrintCFG() const {
+    llvm::outs() << "CFG of module functions\n";
+    const AdjacencyList& adjacency_list_ = functions_cfg_->GetAdjacencyList();
 
-    for (const auto& row: adjacency_list) {
-        for (const auto& pair: row) {
-            if (!pair.second.empty()) {
-                break;
+    for (const auto& pair: adjacency_list_) {
+        auto vertex = static_cast<Vertex<llvm::Function>*>(pair.first.get());
+        llvm::outs() << vertex->object_->getName() <<
+                                                    "(" << vertex->id_ << ")\n";
+        for (auto& node: pair.second) {
+            auto node_data = static_cast<Vertex<llvm::Function>*>(node.get());
+            llvm::outs() << "\t";
+            llvm::outs() << node_data->object_->getName();
+            llvm::outs() << "(" << node_data->id_ << ")\n";
+        }
+    }
+    llvm::outs() << "===\n";
+
+    llvm::outs() << "Going inside each function..\n";
+    for (auto& cfg: bblocks_cfg_) {
+        const AdjacencyList& adjacency_list_ = cfg->GetAdjacencyList();
+        auto bb_cfg = static_cast<BasicBlockCFG*>(cfg.get());
+
+        llvm::outs() << "CFG of a function: ";
+        llvm::outs() << bb_cfg->GetFunction().getName() << "\n";
+        for (const auto& pair: adjacency_list_) {
+            const auto vertex =
+                    static_cast<Vertex<llvm::BasicBlock>*>(pair.first.get());
+            vertex->object_->printAsOperand(llvm::outs());
+            llvm::outs() << "(" << vertex->id_ << ")\n";
+
+            for (const auto& node: pair.second) {
+                auto node_data =
+                        static_cast<Vertex<llvm::BasicBlock>*>(node.get());
+                llvm::outs() << "\t";
+                node_data->object_->printAsOperand(llvm::outs());
+                llvm::outs() << "(" << node_data->id_ << ")\n";
             }
-
-            auto vertex_data =
-                    static_cast<VertexData<llvm::Function>*>(pair.first.get());
-            standalone_functions_.insert(vertex_data->object_);
         }
     }
 }
+
+void Analysis::FindStandaloneFunctions(llvm::Module& module,
+                                       const AdjacencyList& adjacency_list) {
+    // Filer by functions
+    for (const auto& pair: adjacency_list) {
+        if (!pair.second.empty()) {
+            continue;
+        }
+
+        auto vertex = static_cast<Vertex<llvm::Function>*>(pair.first.get());
+        standalone_functions_.insert(vertex->object_);
+    }
+
+    // Filter by globals
+    std::vector<const llvm::GlobalVariable*> global_list;
+    GetLocalGlobals(module, global_list);
+
+    for (const llvm::GlobalVariable* global: global_list) {
+        for (const llvm::User* user: global->users()) {
+            if (const llvm::Instruction* instruction =
+                    llvm::dyn_cast<llvm::Instruction>(user)) {
+                // Get the function which the instruction belongs to
+                const llvm::Function* parent_function =
+                        instruction->getFunction();
+
+                if (standalone_functions_.contains(parent_function)) {
+                    standalone_functions_.erase(parent_function);
+                }
+            }
+        }
+    }
+}
+
+void Analysis::GetLocalGlobals(
+        llvm::Module& module,
+        std::vector<const llvm::GlobalVariable*>& globals) {
+    const llvm::SymbolTableList<llvm::GlobalVariable>& global_list =
+            module.getGlobalList();
+
+    // Clear the container before a routine, just in case
+    globals.clear();
+
+    for (const llvm::GlobalVariable& global: global_list) {
+        // If a global value is a string literal, drop it
+        if (global.isConstant()) {
+            continue;
+        }
+
+        // If the global is defined locally, that is what we are seeking
+        if (global.isDSOLocal()) {
+            globals.push_back(&global);
+        }
+    }
+}
+
+bool Analysis::IsStandalone(const llvm::Function& function) {
+    return standalone_functions_.contains(&function);
+}
+

@@ -367,6 +367,20 @@ llvm::DenseMap<llvm::BasicBlock*, BasicBlockDef> current_def;
 //uint64_t offset = struct_layout->getElementOffset(idx);
 
 /*
+ * When working with globals
+ *
+ * // Definitions have initializers, declarations do not
+        if (!var.hasInitializer()) {
+            continue;
+        }
+//llvm::outs() << var.getName() << "\n";
+        const llvm::Constant* constant = var.getInitializer();
+        if (const llvm::ConstantInt* constInt = llvm::dyn_cast<llvm::ConstantInt>(constant)) {
+            value = constInt->getSExtValue();
+        }
+ *
+ *
+ *
     llvm::TypeFinder type_finder;
     type_finder.run(module, true);
 
@@ -384,4 +398,66 @@ llvm::DenseMap<llvm::BasicBlock*, BasicBlockDef> current_def;
             }
         }
     }
+
+    // These headers were not used
+    // #include <llvm/IR/Function.h>
+// #include <llvm/IR/Instruction.h>
+// #include <llvm/IR/Constants.h>
+// #include <llvm/IR/Dominators.h>
+// #include <llvm/Analysis/LoopInfo.h>
+// #include <llvm/Analysis/PostDominators.h>
+// #include <llvm/Support/raw_ostream.h>
+
+ // https://stackoverflow.com/questions/1545080/c-code-file-extension-what-is-the-difference-between-cc-and-cpp
+// https://en.cppreference.com/w/cpp/filesystem/path/extension
+// https://retrocomputing.stackexchange.com/questions/20281/why-didnt-c-specify-filename-extensions
+
+  int32_t pid = fork();
+    if (pid == 0) {
+        // Exec command in the child process
+        // The terminated pointer must be cast (char *) NULL
+        execlp(
+                compiler,
+                "-emit-llvm",
+                source_path_.c_str(),
+                "-S",
+                "-o",
+                ir_path_.c_str(),
+                "> /dev/null 2>&1", // &> /dev/null also is valid
+static_cast<char*>(nullptr)
+);
+}
+// Wait for the child process to finish
+int32_t status;
+waitpid(pid, &status, 0);
+
+ // Add include to the example
+    const char* code = "#include <cstdint>\n"
+                       "int test_func() {\n"
+                       "  return 0;\n"
+                       "}\n"
+                       "\n"
+                       "class MyClass {\n"
+                       "    int foo;\n"
+                       "public:\n"
+                       "    void bar() {}\n"
+                       "};\n"
+                       "\n"
+                       "MyClass\n"
+                       "foobar() {\n"
+                       "    MyClass a;\n"
+                       "    return a;\n"
+                       "  }";
+
+ //https://stackoverflow.com/questions/19046109/how-can-i-skip-includes-using-libclang
+ //https://stackoverflow.com/questions/35483901/clang-3-8-how-to-stop-clang-from-creating-ast-of-system-headers
+
+    clang::Twine twine(code);
+    FunctionLocation location("foobar");
+    clang::tooling::runToolOnCode(std::make_unique<FrontendAction>(location), twine, "your_file_name.cc");
+
+    //compiler.getPreprocessor().SetSuppressIncludeNotFoundError(true);
+    //compiler.getDiagnostics().setSuppressSystemWarnings(true);
+    //compiler.getDiagnostics().setClient(new clang::IgnoringDiagConsumer());
+
     */

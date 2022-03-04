@@ -315,18 +315,20 @@ struct BasicBlockDef {
 
 llvm::DenseMap<llvm::BasicBlock*, BasicBlockDef> current_def;
 
- const AdjacencyList& functions = functions_cfg_->GetAdjacencyList();
-    for (auto& map_: functions) {
-        for (auto& pair: map_) {
-            auto vertex_data =
-                    static_cast<VertexData<llvm::Function>*>(pair.first.get());
-            llvm::outs() << vertex_data->object_->getName() << "(" << vertex_data->id_ << ")\n";
-            for (auto& node: pair.second) {
-                auto node_data =
-                        static_cast<VertexData<llvm::Function>*>(node.get());
-                llvm::outs() << "\t" << node_data->object_->getName() << "(" << node_data->id_ << ")\n";
-            }
+    // Iterate over function's instructions
+    for (const llvm::Instruction& instruction :
+                                          llvm::instructions(&function)) {
+        if (auto ret_instruction =
+                llvm::dyn_cast<llvm::ReturnInst>(&instruction)) {
+
         }
+        break;
     }
+
+ // https://stackoverflow.com/questions/32993660/ignore-missing-headers-with-clang-ast-parser?rq=1
+    // https://stackoverflow.com/questions/47588327/disable-looking-for-pre-compiled-header-file-in-clang-front-end
+    // https://stackoverflow.com/questions/41717457/extracting-function-declarations-from-a-c-c-header-file-using-clang
+    // https://stackoverflow.com/questions/55315394/error-when-parsing-system-headers-with-recursiveastvisitor
+    // https://stackoverflow.com/questions/37977758/clang-ast-visitor-avoid-traversing-include-files
 
  */
