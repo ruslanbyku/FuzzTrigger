@@ -57,6 +57,10 @@ int32_t File::Open(int32_t flags, uint32_t mode) {
         return -1;
     }
 
+    if (descriptor_ != -1) {
+        return descriptor_;
+    }
+
     int32_t file_descriptor = open(path_.c_str(), flags, mode);
 
     if (file_descriptor == -1) {

@@ -8,22 +8,23 @@
 
 inline bool IsStartUpValid(int argc) { return argc == 2; }
 
-int32_t LaunchRoutine(File& file) {
-    if (!file.Exists()) {
-        fprintf(stderr, "File [%s] does not exist\n", file.GetPath().c_str());
+int32_t LaunchRoutine(File& source_file) {
+    if (!source_file.Exists()) {
+        fprintf(stderr, "File [%s] does not exist\n",
+                source_file.GetPath().c_str());
         return EXIT_FAILURE;
     }
 
-    if (!file.IsCompilable()) {
+    if (!source_file.IsCompilable()) {
         fprintf(stderr, "File [%s] can not be compiled\n",
-                file.GetPath().c_str());
+                source_file.GetPath().c_str());
         return EXIT_FAILURE;
     }
 
     std::unique_ptr<Module> module_dump = std::make_unique<Module>();
 
     {
-        IRCompiler ir_compiler(file.GetPath());
+        IRCompiler ir_compiler(source_file.GetPath());
         bool result = ir_compiler.Compile();
         if (!result) {
             return EXIT_FAILURE;
@@ -38,13 +39,14 @@ int32_t LaunchRoutine(File& file) {
         return EXIT_FAILURE;
     }
 
-    int32_t file_descriptor = file.OpenForReadOnly();
-    if (file_descriptor == -1) {
+    int32_t source_file_descriptor = source_file.OpenForReadOnly();
+    if (source_file_descriptor == -1) {
         return EXIT_FAILURE;
     }
 
-    const char* file_content = file.LoadIntoMemory(file_descriptor);
-    if (!file_content) {
+    const char* source_file_content =
+            source_file.LoadIntoMemory(source_file_descriptor);
+    if (!source_file_content) {
         return EXIT_FAILURE;
     }
 
@@ -58,13 +60,13 @@ int32_t LaunchRoutine(File& file) {
             continue;
         }
 
-        FuzzerGenerator fuzzer_generator(file_content, function);
+        FuzzerGenerator fuzzer_generator(source_file_content, function);
         bool result = fuzzer_generator.Generate();
         if (!result) {
             continue;
         }
 
-        std::filesystem::path source_file_path = file.GetPath();
+        std::filesystem::path source_file_path = source_file.GetPath();
 
         std::string function_fuzzer_path = source_file_path.parent_path();
         function_fuzzer_path += "/";
@@ -72,13 +74,14 @@ int32_t LaunchRoutine(File& file) {
         function_fuzzer_path += function->name_;
         function_fuzzer_path += ".cc";
 
-        File fuzzer(function_fuzzer_path);
-        if (fuzzer.Exists()) {
+        File fuzzer_file(function_fuzzer_path);
+        std::string n = fuzzer_file.GetPath();
+        if (fuzzer_file.Exists()) {
             // So far do nothing
             continue;
         }
 
-        int32_t fuzzer_file_descriptor = file.Create();
+        int32_t fuzzer_file_descriptor = fuzzer_file.Create();
         if (fuzzer_file_descriptor == -1) {
             // So far do nothing
             continue;
