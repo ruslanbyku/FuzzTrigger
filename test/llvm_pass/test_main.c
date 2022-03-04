@@ -1,8 +1,69 @@
+// A vulnerable piece of code in a standalone project
+//
+// Compile gcc -g -m32 -fno-stack-protector main.c -o manual_overflow
+// A vulnerability with x86-64 exec file does not work
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stddef.h>
+
+#define LINE_MAX_LEN 36
+
+//
+// Additional stuff to test in IR (can be commented without breaking the
+// logic)
+//
+int GLOBAL_VARIABLE = 666;
+int* global_pointer;
+
+struct A {
+    struct B {
+        long* j;
+        char** k;
+        bool l;
+        struct C {
+           char n;
+        } m;
+    } a;
+    char b;
+    int* c;
+    unsigned short int d;
+    float e;
+    double f;
+    bool g;
+    long h;
+    int i;
+};
+
+//typedef struct A* (*struct_initialization)();
+
+struct A* initialize_struct() {
+    struct A* collection = (struct A*) malloc(sizeof(struct A));
+    collection->a.j = NULL;
+    collection->a.k = NULL;
+    collection->a.l = false;
+    collection->i = 228;
+    collection->b = 'a';
+    collection->c = &collection->i;
+    collection->d = 1000;
+    collection->e = 3.14;
+    collection->f = 2.9;
+    collection->g = true;
+    collection->h = 5;
+    collection->a.m.n = 'b';
+
+    ++GLOBAL_VARIABLE;
+
+    return collection;
+}
+
+/*
+struct A* initialize_struct_through_function(struct_initialization pointer) {
+    return pointer();
+}
+*/
 
 
 int* initialize_array(int number_of_bytes) {
@@ -17,7 +78,7 @@ int* initialize_array(int number_of_bytes) {
 }
 
 void print_characters(char characters[3]) {
-    //struct A* collection = initialize_struct();
+    struct A* collection = initialize_struct();
     int* array = initialize_array(10);
     free(collection);
     free(array);
