@@ -102,6 +102,12 @@ bool FuzzerGenerator::FindTargetFunction() {
     return true;
 }
 
+void FuzzerGenerator::UpdateFuzzerBody(std::string& body) {
+    std::regex pattern(R"(\$\[fuzzer_body\]\$)", std::regex::ECMAScript);
+    intro_point_ = std::regex_replace(fuzzer_entry_point, pattern, body);
+}
+
+
 bool FuzzerGenerator::GenerateIntroPoint() {
     std::string body;
     bool result = GenerateFuzzerBody(body);
@@ -110,8 +116,7 @@ bool FuzzerGenerator::GenerateIntroPoint() {
     }
 
     // The body is ready, insert it to the fuzzer
-    std::regex pattern(R"(\$\[fuzzer_body\]\$)", std::regex::ECMAScript);
-    intro_point_ = std::regex_replace(fuzzer_entry_point, pattern, body);
+    UpdateFuzzerBody(body);
 
     return true;
 }
@@ -183,6 +188,7 @@ bool FuzzerGenerator::GenerateArguments(std::string& arguments) {
                 arguments += "(void*) data";
                 break;
             case TYPE_INT8: {
+                // Get rid of const
                 arguments += "(const char*) data";
             }
             default:

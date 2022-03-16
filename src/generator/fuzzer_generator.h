@@ -31,8 +31,12 @@ private:
     bool FindTargetFunction();
     bool GenerateIntroPoint();
 
+    void UpdateFuzzerBody(std::string&);
+
     bool GenerateFuzzerBody(std::string&);
     bool GenerateArguments(std::string&);
+
+
 };
 
 #endif //AUTOFUZZ_FUZZER_GENERATOR_H
