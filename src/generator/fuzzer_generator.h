@@ -1,7 +1,6 @@
 #ifndef AUTOFUZZ_FUZZER_GENERATOR_H
 #define AUTOFUZZ_FUZZER_GENERATOR_H
 
-#include "frontend_action.h"
 #include "module.h"
 
 #include <string>
@@ -17,20 +16,16 @@ public:
     const std::string& GetFuzzer() const;
 
 private:
-    std::string                      source_file_;
+    std::string                      source_file_path_;
     const std::unique_ptr<Function>& function_dump_;
 
     std::string                      fuzzer_;
-
-    std::vector<std::string>         headers_;
-    std::string                      function_;
     std::string                      intro_point_;
 
 
-    bool FindDependencyHeaders();
-    bool FindTargetFunction();
     bool GenerateIntroPoint();
 
+    void UpdateHeader();
     void UpdateFuzzerBody(std::string&);
 
     bool GenerateFuzzerBody(std::string&);

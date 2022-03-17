@@ -732,12 +732,12 @@ void Analysis::GetLocalGlobals(
     globals.clear();
 
     for (const llvm::GlobalVariable& global: global_list) {
-        // If a global value is a string literal, drop it
+        // If a global value is a string literal, leave it
         if (global.isConstant()) {
             continue;
         }
 
-        // If the global is defined locally, that is what we are seeking
+        // If the global is defined locally, that is what we are seeking out
         if (global.isDSOLocal()) {
             globals.push_back(&global);
         }

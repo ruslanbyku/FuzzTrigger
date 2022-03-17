@@ -10,7 +10,7 @@ IRCompiler::IRCompiler(std::string source_path)
 }
 
 IRCompiler::~IRCompiler() {
-    Delete();
+    //Delete();
 }
 
 bool IRCompiler::Compile() {

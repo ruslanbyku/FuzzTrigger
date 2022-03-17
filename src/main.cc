@@ -22,23 +22,79 @@ int32_t LaunchRoutine(File& source_file) {
     }
 
     std::unique_ptr<Module> module_dump = std::make_unique<Module>();
-
-    {
-        IRCompiler ir_compiler(source_file.GetPath());
-        bool result = ir_compiler.Compile();
-        if (!result) {
-            return EXIT_FAILURE;
-        }
-
-        const std::string& ir_module = ir_compiler.GetIRFilePath();
-
-        PassLauncher::LaunchOnIRModule(ir_module, module_dump);
+    IRCompiler ir_compiler(source_file.GetPath());
+    bool result = ir_compiler.Compile();
+    if (!result) {
+        return EXIT_FAILURE;
     }
 
+    const std::string& ir_module = ir_compiler.GetIRFilePath();
+    PassLauncher pass_launcher(ir_module);
+    if (!pass_launcher.LaunchAnalysis(module_dump)) {
+        return EXIT_FAILURE;
+    }
     if (!*module_dump) {
         return EXIT_FAILURE;
     }
 
+    for (auto& function: module_dump->functions_) {
+        if (function->name_ != "sanitize_cookie_path") {
+            continue;
+        }
+
+        pass_launcher.LaunchSanitizer(function);
+    }
+
+    /*
+    for (auto& function: module_dump->functions_) {
+        if (function->name_ != "sanitize_cookie_path") {
+            continue;
+        }
+
+        FuzzerGenerator fuzzer_generator(source_file.GetPath(), function);
+        result = fuzzer_generator.Generate();
+        if (!result) {
+            continue;
+        }
+
+        std::filesystem::path source_file_path = source_file.GetPath();
+        std::string function_fuzzer_path = source_file_path.parent_path();
+        function_fuzzer_path += "/";
+        function_fuzzer_path += "fuzz_";
+        function_fuzzer_path += function->name_;
+        function_fuzzer_path += ".cc";
+        File fuzzer_file(function_fuzzer_path);
+        if (fuzzer_file.Exists()) {
+            // So far do nothing
+            continue;
+        }
+        int32_t fuzzer_file_descriptor = fuzzer_file.Create();
+        if (fuzzer_file_descriptor == -1) {
+            // So far do nothing
+            continue;
+        }
+        int64_t bytes = write(
+                fuzzer_file_descriptor,
+                fuzzer_generator.GetFuzzer().c_str(),
+                fuzzer_generator.GetFuzzer().size()
+        );
+        if (bytes == -1) {
+            // So far do nothing
+            continue;
+        }
+        fuzzer_file.Close();
+
+        IRCompiler ir_compiler_2(function_fuzzer_path);
+        result = ir_compiler_2.Compile();
+
+        if (!result) {
+            return EXIT_FAILURE;
+        }
+    }
+     */
+
+
+    /*
     int32_t source_file_descriptor = source_file.OpenForReadOnly();
     if (source_file_descriptor == -1) {
         return EXIT_FAILURE;
@@ -97,6 +153,7 @@ int32_t LaunchRoutine(File& source_file) {
             continue;
         }
     }
+     */
 
     return EXIT_SUCCESS;
 

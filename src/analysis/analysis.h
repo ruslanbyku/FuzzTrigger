@@ -7,6 +7,7 @@
 #include <queue>
 #include <map>
 
+#include <llvm/Pass.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/InstIterator.h>
@@ -14,7 +15,7 @@
 #include <llvm/IR/DataLayout.h>
 #include <llvm/Analysis/CallGraph.h>
 
-using FunctionCFGPtr = std::unique_ptr<CFG<llvm::Function>>;
+using FunctionCFGPtr   = std::unique_ptr<CFG<llvm::Function>>;
 using BasicBlockCFGPtr = std::unique_ptr<CFG<llvm::BasicBlock>>;
 
 //

@@ -460,4 +460,10 @@ waitpid(pid, &status, 0);
     //compiler.getDiagnostics().setSuppressSystemWarnings(true);
     //compiler.getDiagnostics().setClient(new clang::IgnoringDiagConsumer());
 
+    // Search string literals
+    if (llvm::GlobalVariable* global = llvm::dyn_cast<llvm::GlobalVariable>(operand)) {
+                        std::string p = global->getName().str();
+                        llvm::outs() << "1" << p << "\n";
+                    }
+
     */

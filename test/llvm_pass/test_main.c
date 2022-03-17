@@ -190,7 +190,7 @@ int un_init(char* line) {
 //
 // libcurl vulnerable function (https://habr.com/ru/post/259671/)
 //
-static char* sanitize_cookie_path(const char* cookie_path) {
+/*static*/ char* sanitize_cookie_path(const char* cookie_path) {
     size_t len;
     char* new_path = strdup(cookie_path);
     if (!new_path) {

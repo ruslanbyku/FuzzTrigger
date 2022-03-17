@@ -1,6 +1,9 @@
 #include "fuzzer_generator.h"
 
-std::string fuzzer_entry_point = R"(
+std::string fuzzer_entry_point = R"(#include <cstdio>
+#include <cstdint>
+#include "$[file_with_function]$"
+
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     $[fuzzer_body]$
     return 0;
@@ -9,8 +12,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
 FuzzerGenerator::FuzzerGenerator(std::string source_file,
                                  const std::unique_ptr<Function>& function_dump)
-                                 : source_file_(std::move(source_file)),
-                                 function_dump_(function_dump) {}
+                                 : source_file_path_(std::move(source_file)),
+                                   function_dump_(function_dump) {}
 
 const std::string &FuzzerGenerator::GetFuzzer() const {
     return fuzzer_;
@@ -24,87 +27,21 @@ bool FuzzerGenerator::Generate() {
         return false;
     }
 
-    result = FindDependencyHeaders();
-    if (!result) {
-        return false;
-    }
-
-    result = FindTargetFunction();
-    if (!result) {
-        return false;
-    }
-
-    // All data has been gathered, construct the fuzzer
-    // Construct headers
-    for (std::string& header: headers_) {
-        fuzzer_ += "#include <";
-        fuzzer_ += header;
-        fuzzer_ += ">\n";
-    }
-    fuzzer_ += "\n";
-
-    // Append the target function
-    fuzzer_ += function_;
-    fuzzer_ += "\n";
-
     // Append the constructed fuzzer intro function
     fuzzer_ += intro_point_;
 
     return true;
 }
 
-bool FuzzerGenerator::FindDependencyHeaders() {
-    //TODO: Resolve local headers
-
-    const std::regex pattern(".*?\\#include.*?<(.+?)>");
-    // Get value only in parentheses
-    const uint8_t target = 1;
-
-    auto text_start = std::sregex_iterator(source_file_.begin(),
-                                      source_file_.end(), pattern);
-    auto text_end = std::sregex_iterator();
-    int64_t hits_amount = std::distance(text_start, text_end);
-
-    if (hits_amount <= 0) {
-        return false;
-    }
-
-
-    for (std::sregex_iterator ii = text_start; ii != text_end; ++ii) {
-        std::smatch match = *ii;
-
-        headers_.push_back(match[target].str());
-    }
-
-    return true;
+void FuzzerGenerator::UpdateHeader() {
+    std::regex pattern(R"(\$\[file_with_function\]\$)");
+    intro_point_ = std::regex_replace(fuzzer_entry_point, pattern, source_file_path_);
 }
 
-bool FuzzerGenerator::FindTargetFunction() {
-    FunctionLocation location(function_dump_->name_);
-    clang::tooling::runToolOnCode(
-            std::make_unique<FrontendAction>(location),
-                    source_file_
-                    );
-
-    // Check if the function was found
-    if (!location.is_filled_) {
-        // Not found
-        return false;
-    }
-
-    if (location.entity_.empty()) {
-        // The found was not actually found
-        return false;
-    }
-
-    function_ = location.entity_;
-
-    return true;
-}
 
 void FuzzerGenerator::UpdateFuzzerBody(std::string& body) {
     std::regex pattern(R"(\$\[fuzzer_body\]\$)", std::regex::ECMAScript);
-    intro_point_ = std::regex_replace(fuzzer_entry_point, pattern, body);
+    intro_point_ = std::regex_replace(intro_point_, pattern, body);
 }
 
 
@@ -116,6 +53,7 @@ bool FuzzerGenerator::GenerateIntroPoint() {
     }
 
     // The body is ready, insert it to the fuzzer
+    UpdateHeader();
     UpdateFuzzerBody(body);
 
     return true;
