@@ -1,60 +1,36 @@
 #include "fuzzer_generator.h"
 
-std::string fuzzer_entry_point = R"(#include <cstdio>
+std::string headers = R"(#include <cstdio>
 #include <cstdint>
-#include "$[file_with_function]$"
+)";
 
+std::string fuzzer_stub = R"(
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     $[fuzzer_body]$
     return 0;
 }
 )";
 
-FuzzerGenerator::FuzzerGenerator(std::string source_file,
+FuzzerGenerator::FuzzerGenerator(std::string function_declaration,
                                  const std::unique_ptr<Function>& function_dump)
-                                 : source_file_path_(std::move(source_file)),
-                                   function_dump_(function_dump) {}
+: function_declaration_(std::move(function_declaration)),
+function_dump_(function_dump) {}
 
 const std::string &FuzzerGenerator::GetFuzzer() const {
     return fuzzer_;
 }
 
 bool FuzzerGenerator::Generate() {
-    bool result;
-
-    result = GenerateIntroPoint();
-    if (!result) {
-        return false;
-    }
-
-    // Append the constructed fuzzer intro function
-    fuzzer_ += intro_point_;
-
-    return true;
-}
-
-void FuzzerGenerator::UpdateHeader() {
-    std::regex pattern(R"(\$\[file_with_function\]\$)");
-    intro_point_ = std::regex_replace(fuzzer_entry_point, pattern, source_file_path_);
-}
-
-
-void FuzzerGenerator::UpdateFuzzerBody(std::string& body) {
-    std::regex pattern(R"(\$\[fuzzer_body\]\$)", std::regex::ECMAScript);
-    intro_point_ = std::regex_replace(intro_point_, pattern, body);
-}
-
-
-bool FuzzerGenerator::GenerateIntroPoint() {
     std::string body;
     bool result = GenerateFuzzerBody(body);
     if (!result) {
         return false;
     }
+    InsertFuzzerBody(body);
 
-    // The body is ready, insert it to the fuzzer
-    UpdateHeader();
-    UpdateFuzzerBody(body);
+    fuzzer_ += headers;
+    fuzzer_ += function_declaration_;
+    fuzzer_ += fuzzer_stub;
 
     return true;
 }
@@ -140,4 +116,9 @@ bool FuzzerGenerator::GenerateArguments(std::string& arguments) {
     arguments.pop_back();
 
     return true;
+}
+
+void FuzzerGenerator::InsertFuzzerBody(std::string& body) {
+    std::regex pattern(R"(\$\[fuzzer_body\]\$)", std::regex::ECMAScript);
+    fuzzer_stub = std::regex_replace(fuzzer_stub, pattern, body);
 }

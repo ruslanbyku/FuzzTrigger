@@ -37,7 +37,7 @@ set(SOURCES
         src/file/virtual_mapper.h
         src/analysis/ir_compiler.cc
         src/analysis/ir_compiler.h
-        src/sanitizer.cc src/sanitizer.h src/analysis/pass_launcher.cc)
+        src/sanitizer.cc src/sanitizer.h src/analysis/pass_launcher.cc src/generator/name_corrector.cc src/generator/name_corrector.h)
 
 #
 # Compilation flags

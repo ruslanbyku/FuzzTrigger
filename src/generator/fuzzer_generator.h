@@ -16,22 +16,14 @@ public:
     const std::string& GetFuzzer() const;
 
 private:
-    std::string                      source_file_path_;
+    std::string                      function_declaration_;
     const std::unique_ptr<Function>& function_dump_;
 
     std::string                      fuzzer_;
-    std::string                      intro_point_;
 
-
-    bool GenerateIntroPoint();
-
-    void UpdateHeader();
-    void UpdateFuzzerBody(std::string&);
-
+    void InsertFuzzerBody(std::string&);
     bool GenerateFuzzerBody(std::string&);
     bool GenerateArguments(std::string&);
-
-
 };
 
 #endif //AUTOFUZZ_FUZZER_GENERATOR_H

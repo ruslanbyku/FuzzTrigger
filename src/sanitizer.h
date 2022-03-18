@@ -11,7 +11,7 @@
 #include <llvm/Support/FileSystem.h>
 #include <llvm/IR/Operator.h>
 
-class Sanitizer  : public llvm::ModulePass {
+class Sanitizer : public llvm::ModulePass {
 public:
     static char ID;  // Declare for Pass internal operations
 
@@ -24,15 +24,16 @@ public:
 
 private:
     const std::unique_ptr<Function>& function_dump_;
+    llvm::Function*                  target_function_;
 
     void SanitizeModule(llvm::Module&);
     void FindGlobalsToDelete(llvm::Module&, std::set<llvm::GlobalVariable*>&);
     void FindFunctionsToDelete(llvm::Module&, std::set<llvm::Function*>&);
     void FindStringLiterals(const llvm::Function&,
                             std::set<const llvm::GlobalVariable*>&);
+    void ResolveLinkage();
 
     void UpdateIRModule(llvm::Module&);
-
     void Debug(llvm::Module&);
 };
 

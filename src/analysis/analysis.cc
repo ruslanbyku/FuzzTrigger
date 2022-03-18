@@ -126,7 +126,7 @@ void Analysis::DumpModuleStructs(llvm::Module& module) {
     // Check if structs are present in the module
     uint64_t structs_number = module_structs.size();
     if (structs_number == 0) {
-        // There are no structs in the module, non a problem
+        // There are no structs in the module, not a problem
         return;
     }
 
@@ -747,4 +747,3 @@ void Analysis::GetLocalGlobals(
 bool Analysis::IsStandalone(const llvm::Function& function) {
     return standalone_functions_.contains(&function);
 }
-

@@ -45,3 +45,23 @@ bool PassLauncher::LaunchSanitizer(
 
     return true;
 }
+
+bool PassLauncher::LaunchNameCorrector(
+        const std::unique_ptr<Function>& function_dump) {
+    llvm::SMDiagnostic error;
+    llvm::LLVMContext context;
+
+    // Load IR text representation into memory
+    std::unique_ptr<llvm::Module>
+            module(llvm::parseIRFile(ir_module_, error, context));
+    if (!module) {
+        return false;
+    }
+
+    // Register the pass and run it
+    llvm::legacy::PassManager pass_manager;
+    pass_manager.add(new NameCorrector(function_dump));
+    pass_manager.run(*module);
+
+    return true;
+}

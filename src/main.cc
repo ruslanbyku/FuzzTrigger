@@ -22,15 +22,15 @@ int32_t LaunchRoutine(File& source_file) {
     }
 
     std::unique_ptr<Module> module_dump = std::make_unique<Module>();
-    IRCompiler ir_compiler(source_file.GetPath());
-    bool result = ir_compiler.Compile();
+    IRCompiler source_to_ir(source_file.GetPath());
+    bool result = source_to_ir.Compile();
     if (!result) {
         return EXIT_FAILURE;
     }
 
-    const std::string& ir_module = ir_compiler.GetIRFilePath();
-    PassLauncher pass_launcher(ir_module);
-    if (!pass_launcher.LaunchAnalysis(module_dump)) {
+    const std::string& ir_source_path = source_to_ir.GetIRFilePath();
+    PassLauncher pass_on_source(ir_source_path);
+    if (!pass_on_source.LaunchAnalysis(module_dump)) {
         return EXIT_FAILURE;
     }
     if (!*module_dump) {
@@ -42,8 +42,73 @@ int32_t LaunchRoutine(File& source_file) {
             continue;
         }
 
-        pass_launcher.LaunchSanitizer(function);
+        // Sanitize source file
+        pass_on_source.LaunchSanitizer(function);
+
+        // Generate fuzzer stub
+        std::string fuzzer;
+        std::string declaration("static char* sanitize_cookie_path(const char* cookie_path);");
+        FuzzerGenerator fuzzer_generator(declaration, function);
+        fuzzer_generator.Generate();
+        fuzzer = fuzzer_generator.GetFuzzer();
+
+        // Write fuzzer into a file
+        std::filesystem::path source_file_path = source_file.GetPath();
+        std::string function_fuzzer_path = source_file_path.parent_path();
+        function_fuzzer_path += "/";
+        function_fuzzer_path += "fuzz_";
+        function_fuzzer_path += function->name_;
+        function_fuzzer_path += ".cc";
+        File fuzzer_file(function_fuzzer_path);
+        if (fuzzer_file.Exists()) {
+            // So far do nothing
+            continue;
+        }
+        int32_t fuzzer_file_descriptor = fuzzer_file.Create();
+        if (fuzzer_file_descriptor == -1) {
+            // So far do nothing
+            continue;
+        }
+        int64_t bytes = write(
+                fuzzer_file_descriptor,
+                fuzzer.c_str(),
+                fuzzer.size()
+        );
+        if (bytes == -1) {
+            // So far do nothing
+            continue;
+        }
+        fuzzer_file.Close();
+
+        // Compile fuzzer stub to IR and correct the function name
+        IRCompiler fuzzer_to_ir(function_fuzzer_path);
+        result = fuzzer_to_ir.Compile();
+        if (!result) {
+            return EXIT_FAILURE;
+        }
+        const std::string& ir_fuzzer_path = fuzzer_to_ir.GetIRFilePath();
+        PassLauncher pass_on_fuzzer(ir_fuzzer_path);
+        pass_on_fuzzer.LaunchNameCorrector(function);
+
+        // Both IRs are ready, compile them
+        std::string fuzzer_executable = source_file_path.parent_path();
+        fuzzer_executable += "/fuzzer";
+        std::string command;
+        command += "clang++ ";
+        command += "-O2 ";
+        command += "-g ";
+        command += "-fno-omit-frame-pointer ";
+        command += "-fsanitize=address,fuzzer ";
+        command += "-fsanitize-coverage=trace-cmp,trace-gep,trace-div ";
+        command += ir_source_path + " ";
+        command += ir_fuzzer_path + " ";
+        command += "-o ";
+        command += fuzzer_executable;
+
+        system(command.c_str());
     }
+
+
 
     /*
     for (auto& function: module_dump->functions_) {

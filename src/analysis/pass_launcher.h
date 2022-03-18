@@ -3,6 +3,7 @@
 
 #include "analysis.h"
 #include "sanitizer.h"
+#include "name_corrector.h"
 
 #include <exception>
 
@@ -19,6 +20,7 @@ public:
 
     bool LaunchAnalysis(std::unique_ptr<Module>&);
     bool LaunchSanitizer(const std::unique_ptr<Function>&);
+    bool LaunchNameCorrector(const std::unique_ptr<Function>&);
 
 private:
     std::string ir_module_;
