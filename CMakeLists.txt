@@ -18,26 +18,31 @@ include_directories(
         src/
         src/analysis/
         src/generator/
-        src/file/
+        src/system/
 )
 set(SOURCES
         src/main.cc
-        src/analysis/module.cc
-        src/analysis/module.h
+        src/module.cc
+        src/module.h
         src/analysis/analysis.cc
         src/analysis/analysis.h
-        src/analysis/type.h
+        src/type.h
         src/analysis/cfg.h
-        src/analysis/pass_launcher.h
-        src/file/file.cc
-        src/file/file.h
+        src/pass_launcher.h
+        src/system/file.cc
+        src/system/file.h
         src/generator/fuzzer_generator.h
         src/generator/fuzzer_generator.cc
-        src/file/virtual_mapper.cc
-        src/file/virtual_mapper.h
-        src/analysis/ir_compiler.cc
-        src/analysis/ir_compiler.h
-        src/sanitizer.cc src/sanitizer.h src/analysis/pass_launcher.cc src/generator/name_corrector.cc src/generator/name_corrector.h)
+        src/system/virtual_mapper.cc
+        src/system/virtual_mapper.h
+        src/generator/sanitizer.cc
+        src/generator/sanitizer.h
+        src/pass_launcher.cc
+        src/generator/name_corrector.cc
+        src/generator/name_corrector.h
+        src/system/compiler.cc
+        src/system/compiler.h
+        )
 
 #
 # Compilation flags

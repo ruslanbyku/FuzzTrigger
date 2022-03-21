@@ -79,3 +79,18 @@ bool VirtualMapper::MapIntoMemory(int32_t protection, int32_t flags,
     return true;
 }
 
+bool VirtualMapper::IsFileOffsetValid(uint64_t offset) {
+    int64_t page_size = sysconf(_SC_PAGE_SIZE);
+
+    if (page_size == -1) {
+        return false;
+    }
+
+    if (offset != 0 && (page_size % offset) != 0) {
+        // File offset is not multiple
+        return false;
+    }
+
+    return true;
+}
+

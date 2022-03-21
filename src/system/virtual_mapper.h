@@ -14,6 +14,7 @@ public:
     VirtualMapper(VirtualMapper&&) noexcept            = delete;
     VirtualMapper& operator=(VirtualMapper&&) noexcept = delete;
 
+    // Check the mapping current status (if virtual memory has been allotted)
     explicit operator bool() const;
 
     bool        AllocateReadMap(int32_t, int64_t);
@@ -31,20 +32,7 @@ private:
 
     // File offset must be a multiple of the page size as returned by
     // sysconf(_SC_PAGE_SIZE)
-    inline bool IsFileOffsetValid(uint64_t offset) {
-        int64_t page_size = sysconf(_SC_PAGE_SIZE);
-
-        if (page_size == -1) {
-            return false;
-        }
-
-        if (offset != 0 && (page_size % offset) != 0) {
-            // File offset is not multiple
-            return false;
-        }
-
-        return true;
-    }
+    bool IsFileOffsetValid(uint64_t);
 
 };
 
