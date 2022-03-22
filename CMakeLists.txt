@@ -42,6 +42,10 @@ set(SOURCES
         src/generator/name_corrector.h
         src/system/compiler.cc
         src/system/compiler.h
+        src/utils.cc
+        src/utils.h
+        src/system/source_wrapper.cc
+        src/system/source_wrapper.h
         )
 
 #
@@ -49,7 +53,7 @@ set(SOURCES
 #
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 # Disable C++ native RTTI and EH (use RTTI with llvm instead)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti") # -fno-exceptions
 
 
 add_executable(AutoFuzz ${SOURCES})

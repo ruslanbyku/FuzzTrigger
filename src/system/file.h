@@ -19,9 +19,9 @@ public:
     explicit File(std::string);
     ~File()                          = default;
     File(const File&);
-    File& operator=(const File&)     = delete;
+    File& operator=(const File&);
     File(File&&) noexcept;
-    File& operator=(File&&) noexcept = delete;
+    File& operator=(File&&) noexcept;
 
     // Check the descriptor current status (if the file is open)
     explicit operator bool() const;

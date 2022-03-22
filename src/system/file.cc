@@ -6,10 +6,31 @@ File::File(std::string path)
 File::File(const File& file)
 : path_(file.path_), descriptor_(file.descriptor_) {}
 
+File& File::operator=(const File& file) {
+    if (this == &file) {
+        return *this;
+    }
+
+    path_       = file.path_;
+    descriptor_ = file.descriptor_;
+
+    return *this;
+}
+
 File::File(File&& file) noexcept : descriptor_(-1) {
     // Swap existing data and default initialized data
     std::swap(path_, file.path_);
     std::swap(descriptor_, file.descriptor_);
+}
+
+File& File::operator=(File&& file) noexcept {
+    path_       = file.path_;
+    descriptor_ = file.descriptor_;
+
+    file.path_.clear();
+    file.descriptor_ = -1;
+
+    return *this;
 }
 
 File::operator bool() const {
@@ -209,4 +230,3 @@ int64_t File::Write(const std::string& data, uint64_t size) {
 
     return bytes;
 }
-
