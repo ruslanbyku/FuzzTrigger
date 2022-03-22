@@ -34,14 +34,16 @@ private:
     std::vector<File>       garbage_;
     bool                    random_on_;
 
+    void InitializeState();
+
     bool PerformAnalysis();
     bool PerformGeneration(const std::unique_ptr<Function>&);
 
     void ConstructResultDirectoryPath();
-    void ConstructFunctionDirectoryPath(const std::string&, std::string);
+    void ConstructFunctionDirectoryPath(const std::string&, std::string&);
     void ConstructFuzzerStubPath(const std::string&,
-                                 const std::string&, std::string);
-    void ConstructFuzzerExecutablePath(const std::string&, std::string);
+                                 const std::string&, std::string&);
+    void ConstructFuzzerExecutablePath(const std::string&, std::string&);
 
     bool WriteFuzzerContentToFile(File&, const std::string&);
 

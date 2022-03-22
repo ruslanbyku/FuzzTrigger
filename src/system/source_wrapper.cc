@@ -6,6 +6,15 @@ SourceWrapper::SourceWrapper(std::string source_file_path, bool auto_deletion,
 working_directory_(source_file_.GetParentPath()),
 module_dump_(std::make_unique<Module>()), ir_source_file_(source_file_),
 auto_deletion_(auto_deletion), random_on_(random_on) {
+    InitializeState();
+}
+
+SourceWrapper::~SourceWrapper() {
+    EmptyGarbage();
+}
+
+void SourceWrapper::InitializeState() {
+    bool result;
 
     // Check if the file exists in the system
     if (!source_file_.Exists()) {
@@ -32,10 +41,20 @@ auto_deletion_(auto_deletion), random_on_(random_on) {
     // The source file is valid
     // Create a corresponding IR file for the source file
     ir_source_file_.ReplaceExtension(ir_extension);
+    result = Compiler::CompileToIR(source_file_, ir_source_file_);
+    if (!result) {
+        std::string exception_message;
+
+        exception_message += "File [";
+        exception_message += ir_source_file_.GetPath();
+        exception_message += "] can not be compiled to IR\n";
+
+        throw std::runtime_error(exception_message);
+    }
 
     // Create a directory to store results
     ConstructResultDirectoryPath();
-    bool result = CreateDirectory(result_directory_path_);
+    result = CreateDirectory(result_directory_path_);
     if (!result) {
         std::string exception_message;
 
@@ -45,10 +64,6 @@ auto_deletion_(auto_deletion), random_on_(random_on) {
 
         throw std::runtime_error(exception_message);
     }
-}
-
-SourceWrapper::~SourceWrapper() {
-    EmptyGarbage();
 }
 
 bool SourceWrapper::LaunchRoutine() {
@@ -113,10 +128,15 @@ bool SourceWrapper::PerformGeneration(
         return false;
     }
     File ir_function_file(ir_function_path);
+    // Put the file into the garbage right away after the creation
+    PlaceIntoGarbage(ir_function_file);
 
     // Sanitize the IR function file
     PassLauncher pass_on_function_ir(ir_function_path);
-    pass_on_function_ir.LaunchSanitizer(function_dump);
+    result = pass_on_function_ir.LaunchSanitizer(function_dump);
+    if (!result) {
+        return false;
+    }
 
     // Generate fuzzer_content stub content
     std::string fuzzer_content;
@@ -134,6 +154,8 @@ bool SourceWrapper::PerformGeneration(
     if (!result) {
         return false;
     }
+    // Put the file into the garbage right away after the creation
+    PlaceIntoGarbage(fuzzer_stub_file);
 
     // Compile fuzzer stub file to IR
     if (!Compiler::IsCompilable(fuzzer_stub_file)) {
@@ -148,10 +170,15 @@ bool SourceWrapper::PerformGeneration(
     if (!result) {
         return false;
     }
+    // Put the file into the garbage right away after the creation
+    PlaceIntoGarbage(ir_fuzzer_stub_file);
 
     // Modify IR fuzzer stub file (make suitable for separate compilation)
-    PassLauncher pass_on_fuzzer(fuzzer_stub_path);
-    pass_on_fuzzer.LaunchNameCorrector(function_dump);
+    PassLauncher pass_on_fuzzer(ir_fuzzer_stub_file.GetPath());
+    result = pass_on_fuzzer.LaunchNameCorrector(function_dump);
+    if (!result) {
+        return false;
+    }
 
     // Compile both IR
     std::string fuzzer_executable_path;
@@ -165,11 +192,6 @@ bool SourceWrapper::PerformGeneration(
             ir_fuzzer_stub_file,
             final_executable_file
             );
-
-    // Save files for further deletion
-    PlaceIntoGarbage(ir_function_file);
-    PlaceIntoGarbage(fuzzer_stub_file);
-    PlaceIntoGarbage(ir_fuzzer_stub_file);
 
     return true;
 }
@@ -190,7 +212,7 @@ void SourceWrapper::ConstructResultDirectoryPath() {
 }
 
 void SourceWrapper::ConstructFunctionDirectoryPath(
-        const std::string& function_name, std::string path) {
+        const std::string& function_name, std::string& path) {
     path += result_directory_path_;
     path += function_name;
 
@@ -205,7 +227,7 @@ void SourceWrapper::ConstructFunctionDirectoryPath(
 
 void SourceWrapper::ConstructFuzzerStubPath(
         const std::string& function_name,
-        const std::string& parent_directory, std::string path) {
+        const std::string& parent_directory, std::string& path) {
     path += parent_directory;
     path += "fuzz_";
     path += function_name;
@@ -213,7 +235,7 @@ void SourceWrapper::ConstructFuzzerStubPath(
 }
 
 void SourceWrapper::ConstructFuzzerExecutablePath(
-        const std::string& parent_directory, std::string path) {
+        const std::string& parent_directory, std::string& path) {
     path += parent_directory;
     path += "fuzzer";
 }

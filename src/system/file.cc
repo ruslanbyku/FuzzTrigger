@@ -211,8 +211,12 @@ int32_t File::Open(int32_t flags, uint32_t mode) {
 }
 
 bool File::CreateDirectory() {
-    // Create all parent directories that do not exist
-    return std::filesystem::create_directories(path_);
+    if (!path_.empty()) {
+        // Create all parent directories that do not exist
+        return std::filesystem::create_directories(path_);
+    }
+
+    return false;
 }
 
 int64_t File::Write(const std::string& data, uint64_t size) {
