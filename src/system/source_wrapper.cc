@@ -16,26 +16,51 @@ SourceWrapper::~SourceWrapper() {
 void SourceWrapper::InitializeState() {
     bool result;
 
+    if (!source_file_.IsAbsolute()) {
+        std::string exception_message;
+
+        exception_message += "File path of ";
+        exception_message += source_file_.GetPath();
+        exception_message += " is relative.";
+
+        throw std::runtime_error(exception_message);
+    }
+
     // Check if the file exists in the system
     if (!source_file_.Exists()) {
         std::string exception_message;
 
-        exception_message += "File [";
+        exception_message += "File ";
         exception_message += source_file_.GetPath();
-        exception_message += "] does not exist\n";
+        exception_message += " does not exist.";
 
         throw std::runtime_error(exception_message);
+    }
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "File " << source_file_.GetPath() << " found.";
+        LOG(LOG_LEVEL_INFO) << "Current working directory "
+                            << working_directory_ << ".";
+        LOG(LOG_LEVEL_INFO) << "Check whether " << source_file_.GetPath()
+                            << " can be compiled.";
     }
 
     // Check if the file is a source file and can be compiled
     if (!Compiler::IsCompilable(source_file_)) {
         std::string exception_message;
 
-        exception_message += "File [";
+        exception_message += "File ";
         exception_message += source_file_.GetPath();
-        exception_message += "] can not be compiled\n";
+        exception_message += " can not be compiled.";
 
         throw std::runtime_error(exception_message);
+    }
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "File " << source_file_.GetPath()
+                            << " can be compiled.";
+        LOG(LOG_LEVEL_INFO) << "Compiling " << source_file_.GetPath()
+                            << " to IR.";
     }
 
     // The source file is valid
@@ -45,11 +70,17 @@ void SourceWrapper::InitializeState() {
     if (!result) {
         std::string exception_message;
 
-        exception_message += "File [";
+        exception_message += "An error occurred when compiling ";
         exception_message += ir_source_file_.GetPath();
-        exception_message += "] can not be compiled to IR\n";
+        exception_message += " to IR.";
 
         throw std::runtime_error(exception_message);
+    }
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "File " << ir_source_file_.GetPath()
+                            << " created.";
+        LOG(LOG_LEVEL_INFO) << "Create a directory to store program results.";
     }
 
     // Create a directory to store results
@@ -58,11 +89,25 @@ void SourceWrapper::InitializeState() {
     if (!result) {
         std::string exception_message;
 
-        exception_message += "Directory [";
+        exception_message += "Directory ";
         exception_message += result_directory_path_;
-        exception_message += "] can not be created\n";
+        exception_message += " can not be created.";
 
         throw std::runtime_error(exception_message);
+    }
+
+    if (LOGGER_ON) {
+        std::string random_parameter   = random_on_     ? "true" : "false";
+        std::string deletion_parameter = auto_deletion_ ? "true" : "false";
+
+        LOG(LOG_LEVEL_INFO) << "Directory " << result_directory_path_
+                            << " created.";
+        LOG(LOG_LEVEL_INFO) << "Additional parameters are used:";
+        LOG(LOG_LEVEL_INFO) << "file name randomization = " << random_parameter;
+        LOG(LOG_LEVEL_INFO) << "file auto deletion      = "
+                            << deletion_parameter;
+        LOG(LOG_LEVEL_INFO) << "Environment configuration is done. "
+                               "Ready to proceed.";
     }
 }
 
@@ -70,10 +115,21 @@ bool SourceWrapper::LaunchRoutine() {
     // Save a file for further deletion
     PlaceIntoGarbage(ir_source_file_);
 
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Start analysis of " << ir_source_file_.GetPath()
+                            << ".";
+    }
+
     // Make analysis
     bool analysis_result = PerformAnalysis();
     if (!analysis_result) {
+        // Analysis resulted unsuccessful
         return false;
+    }
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Analysis went successful.";
+        LOG(LOG_LEVEL_INFO) << "Start fuzzer generation process.";
     }
 
     // Analysis is ready, module_dump has been filled
@@ -87,6 +143,10 @@ bool SourceWrapper::LaunchRoutine() {
             // Do not know what to do so far
             return false;
         }
+    }
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Fuzzer generation process went successful.";
     }
 
     return true;
@@ -112,11 +172,21 @@ bool SourceWrapper::PerformGeneration(
     bool result;
     std::string function_directory_path;
 
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Generate fuzzer for "
+                            << function_dump->name_ << "(...).";
+    }
+
     ConstructFunctionDirectoryPath(
             function_dump->name_, function_directory_path);
     result = CreateDirectory(function_directory_path);
     if (!result) {
         return false;
+    }
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Directory " << function_directory_path
+                                            << " created.";
     }
 
     // Create a separate IR file for the function
@@ -127,6 +197,11 @@ bool SourceWrapper::PerformGeneration(
     if (!ir_source_file_.Copy(ir_function_path)) {
         return false;
     }
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "File " << ir_function_path << " created.";
+    }
+
     File ir_function_file(ir_function_path);
     // Put the file into the garbage right away after the creation
     PlaceIntoGarbage(ir_function_file);
@@ -138,12 +213,21 @@ bool SourceWrapper::PerformGeneration(
         return false;
     }
 
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "File " << ir_function_path
+                                       << " has been sanitized.";
+    }
+
     // Generate fuzzer_content stub content
     std::string fuzzer_content;
     std::string declaration("static char* sanitize_cookie_path(const char* cookie_path);");
     FuzzerGenerator fuzzer_generator(declaration, function_dump);
     fuzzer_generator.Generate();
     fuzzer_content = fuzzer_generator.GetFuzzer();
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Fuzzer data has been generated.";
+    }
 
     // Create the fuzzer stub file and write fuzzer data to it
     std::string fuzzer_stub_path;
@@ -166,18 +250,38 @@ bool SourceWrapper::PerformGeneration(
     }
     File ir_fuzzer_stub_file(fuzzer_stub_path);
     ir_fuzzer_stub_file.ReplaceExtension(ir_extension);
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Compiling " << fuzzer_stub_path << " to IR.";
+    }
+
     result = Compiler::CompileToIR(fuzzer_stub_file, ir_fuzzer_stub_file);
     if (!result) {
         return false;
     }
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "File " << ir_fuzzer_stub_file.GetPath()
+                            << " created.";
+    }
+
     // Put the file into the garbage right away after the creation
     PlaceIntoGarbage(ir_fuzzer_stub_file);
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Resolve name mangling in "
+                            << ir_fuzzer_stub_file.GetPath() << ".";
+    }
 
     // Modify IR fuzzer stub file (make suitable for separate compilation)
     PassLauncher pass_on_fuzzer(ir_fuzzer_stub_file.GetPath());
     result = pass_on_fuzzer.LaunchNameCorrector(function_dump);
     if (!result) {
         return false;
+    }
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Compiling separately 2 IRs.";
     }
 
     // Compile both IR
@@ -192,6 +296,13 @@ bool SourceWrapper::PerformGeneration(
             ir_fuzzer_stub_file,
             final_executable_file
             );
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Executable "
+                            << fuzzer_executable_path << " created.";
+        LOG(LOG_LEVEL_INFO) << "Fuzzer generation for "
+                            << function_dump->name_ << "(...) went successful.";
+    }
 
     return true;
 }
@@ -254,10 +365,19 @@ bool SourceWrapper::WriteFuzzerContentToFile(
         return false;
     }
 
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "File " << file.GetPath() << " created.";
+    }
+
     int64_t bytes = file.Write(fuzzer_content, fuzzer_content.size());
     if (bytes == -1) {
         // So far do nothing
         return false;
+    }
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Fuzzer data has been written to "
+                            << file.GetPath() << ".";
     }
 
     file.Close();
@@ -282,6 +402,10 @@ void SourceWrapper::PlaceIntoGarbage(File& path) {
 void SourceWrapper::EmptyGarbage() {
     if (auto_deletion_) {
         std::for_each(garbage_.begin(), garbage_.end(), [](File& file) {
+            if (LOGGER_ON) {
+                LOG(LOG_LEVEL_INFO) << "Delete " << file.GetPath() << ".";
+            }
+
             file.Delete();
         });
     }

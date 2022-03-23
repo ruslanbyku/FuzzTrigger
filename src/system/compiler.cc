@@ -55,13 +55,13 @@ namespace Compiler {
 
         // Construct a command to be compiled
         command += cpp_compiler;
-        command += " -O2 ";
-        command += " -g ";
-        command += " -fno-omit-frame-pointer ";
-        command += " -fsanitize=address,fuzzer ";
+        command += " -O2";
+        command += " -g";
+        command += " -fno-omit-frame-pointer";
+        command += " -fsanitize=address,fuzzer";
         command += " -fsanitize-coverage=trace-cmp,trace-gep,trace-div ";
-        command += " " + source_ir.GetPath() + " ";
-        command += " " + fuzzer_ir.GetPath() + " ";
+        command += source_ir.GetPath() + " ";
+        command += fuzzer_ir.GetPath();
         command += " -o ";
         command += executable.GetPath();
         command += " > /dev/null 2>&1"; // &> /dev/null
@@ -107,94 +107,3 @@ namespace Compiler {
     }
 
 } // end Compiler
-
-/*
-Compiler::Compiler(File file) : file_(std::move(file)) {}
-
-const File &Compiler::GetFile() const {
-    return file_;
-}
-
-bool Compiler::IsCompilable(const File&) {
-    if (!file_.Exists()) {
-        return false;
-    }
-
-    std::string file_extension(file_.GetExtension());
-    if (file_extension.empty()) {
-        return false;
-    }
-
-    bool result = std::ranges::any_of(
-            cxx_extensions,
-            [&file_extension](const char* const extension) {
-                return file_extension == extension;
-            });
-
-    return result;
-}
-
-bool Compiler::CompileToFuzzer(const File& source_ir, const File& fuzzer_ir, const File&) {
-    std::string command;
-
-    // Construct a command to be compiled
-    command += cpp_compiler;
-    command += " -O2 ";
-    command += " -g ";
-    command += " -fno-omit-frame-pointer ";
-    command += " -fsanitize=address,fuzzer ";
-    command += " -fsanitize-coverage=trace-cmp,trace-gep,trace-div ";
-    command += " " + source_ir.GetPath() + " ";
-    command += " " + fuzzer_ir.GetPath() + " ";
-    command += " -o ";
-    command += file_.GetPath();
-    command += " > /dev/null 2>&1"; // &> /dev/null
-
-    bool executed = Compile(command);
-    if (!executed) {
-        return false;
-    }
-
-    File compiled_result(file_.GetPath());
-    if (!compiled_result.Exists()) {
-        return false;
-    }
-
-    return true;
-}
-
-bool Compiler::CompileToIR(const File& ir, const File&) {
-    std::string command;
-
-    // Construct a command to be compiled
-    command += c_compiler;
-    command += " -emit-llvm ";
-    command += file_.GetPath();
-    command += " -S ";
-    command += " -o ";
-    command += ir.GetPath();
-    command += " > /dev/null 2>&1"; // &> /dev/null
-
-    bool executed = Compile(command);
-    if (!executed) {
-        return false;
-    }
-
-    if (!ir.Exists()) {
-        return false;
-    }
-
-    return true;
-}
-
-bool Compiler::Compile(const std::string& command) {
-    if (std::system(nullptr) == 0) {
-        // Can not execute the command
-        return false;
-    }
-
-    std::system(command.c_str());
-
-    return true;
-}
-*/

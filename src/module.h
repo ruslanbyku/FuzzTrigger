@@ -34,6 +34,7 @@ struct Module {
     // external + internal
     uint64_t                                 functions_number_;
     std::vector<std::unique_ptr<Function>>   functions_;
+    uint64_t                                 standalone_funcs_number_;
 };
 
 struct Function {

@@ -452,13 +452,13 @@ waitpid(pid, &status, 0);
  //https://stackoverflow.com/questions/19046109/how-can-i-skip-includes-using-libclang
  //https://stackoverflow.com/questions/35483901/clang-3-8-how-to-stop-clang-from-creating-ast-of-system-headers
 
-    clang::Twine twine(code);
+    llvm::Twine twine(code);
     FunctionLocation location("foobar");
-    clang::tooling::runToolOnCode(std::make_unique<FrontendAction>(location), twine, "your_file_name.cc");
+    llvm::tooling::runToolOnCode(std::make_unique<FrontendAction>(location), twine, "your_file_name.cc");
 
     //compiler.getPreprocessor().SetSuppressIncludeNotFoundError(true);
     //compiler.getDiagnostics().setSuppressSystemWarnings(true);
-    //compiler.getDiagnostics().setClient(new clang::IgnoringDiagConsumer());
+    //compiler.getDiagnostics().setClient(new llvm::IgnoringDiagConsumer());
 
     // Search string literals
     if (llvm::GlobalVariable* global = llvm::dyn_cast<llvm::GlobalVariable>(operand)) {

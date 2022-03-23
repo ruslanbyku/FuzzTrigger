@@ -7,6 +7,7 @@
 #include "utils.h"
 #include "compiler.h"
 #include "file.h"
+#include "logger.h"
 
 #include <exception>
 

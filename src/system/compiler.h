@@ -2,6 +2,7 @@
 #define AUTOFUZZ_COMPILER_H
 
 #include "file.h"
+#include "logger.h"
 
 #include <string>
 #include <array>
@@ -21,25 +22,5 @@ namespace Compiler {
     bool CompileToFuzzer(const File&, const File&, const File&);
     bool CompileToIR(const File&, const File&);
 }
-
-/*
-class Compiler {
-public:
-    explicit Compiler(File)                  = delete;
-    ~Compiler()                              = delete;
-    Compiler(const Compiler&)                = delete;
-    Compiler& operator=(const Compiler&)     = delete;
-    Compiler(Compiler&&) noexcept            = delete;
-    Compiler& operator=(Compiler&&) noexcept = delete;
-
-    static bool IsCompilable(const File&);
-    static bool CompileToFuzzer(const File&, const File&, const File&);
-    static bool CompileToIR(const File&, const File&);
-
-private:
-
-    static bool Compile(const std::string&);
-};
-*/
 
 #endif //AUTOFUZZ_COMPILER_H

@@ -1,4 +1,5 @@
 #include "source_wrapper.h"
+#include "logger.h"
 
 #include <cstdio>
 
@@ -8,11 +9,28 @@ inline bool IsStartUpValid(int argc) { return argc == 2; }
 int main(int argc, char** argv) {
     if (!IsStartUpValid(argc)) {
         fprintf(stderr, "Usage: %s <.c>\n", argv[0]);
-        exit(EXIT_FAILURE);
+
+        return EXIT_FAILURE;
     }
 
-    SourceWrapper wrapper(argv[1]);
-    bool result = wrapper.LaunchRoutine();
+    StartLogging();
+
+    bool result = false;
+    try {
+        if (LOGGER_ON) {
+            LOG(LOG_LEVEL_INFO) << "Begin working with " << argv[1] << ".";
+        }
+
+        SourceWrapper wrapper(argv[1]);
+        result = wrapper.LaunchRoutine();
+    } catch (const std::runtime_error& exception) {
+        if (LOGGER_ON) {
+            LOG(LOG_LEVEL_ERROR) << exception.what();
+        }
+    }
+
+    FinishLogging();
+
     if (!result) {
         return EXIT_FAILURE;
     }

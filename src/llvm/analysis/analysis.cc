@@ -172,6 +172,9 @@ bool Analysis::DumpModuleFunctions(llvm::Module& module,
         return false;
     }
 
+    // Save the number of standalone functions
+    module_dump_->standalone_funcs_number_ = standalone_functions_.size();
+
     // Allocate space in vector for all functions
     module_dump_->functions_.reserve(functions_number);
 
@@ -651,9 +654,10 @@ uint32_t Analysis::MakeControlFlowGraph(const llvm::Function& function,
 
 void Analysis::PrintCFG() const {
     llvm::outs() << "CFG of module functions\n";
-    const AdjacencyList& adjacency_list_ = functions_cfg_->GetAdjacencyList();
+    const AdjacencyList& func_adjacency_list_ =
+                                             functions_cfg_->GetAdjacencyList();
 
-    for (const auto& pair: adjacency_list_) {
+    for (const auto& pair: func_adjacency_list_) {
         auto vertex = static_cast<Vertex<llvm::Function>*>(pair.first.get());
         llvm::outs() << vertex->object_->getName() <<
                                                     "(" << vertex->id_ << ")\n";
@@ -668,12 +672,12 @@ void Analysis::PrintCFG() const {
 
     llvm::outs() << "Going inside each function..\n";
     for (auto& cfg: bblocks_cfg_) {
-        const AdjacencyList& adjacency_list_ = cfg->GetAdjacencyList();
+        const AdjacencyList& bb_adjacency_list_ = cfg->GetAdjacencyList();
         auto bb_cfg = static_cast<BasicBlockCFG*>(cfg.get());
 
         llvm::outs() << "CFG of a function: ";
         llvm::outs() << bb_cfg->GetFunction().getName() << "\n";
-        for (const auto& pair: adjacency_list_) {
+        for (const auto& pair: bb_adjacency_list_) {
             const auto vertex =
                     static_cast<Vertex<llvm::BasicBlock>*>(pair.first.get());
             vertex->object_->printAsOperand(llvm::outs());

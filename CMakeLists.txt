@@ -16,36 +16,39 @@ add_definitions(${LLVM_DEFINITIONS_LIST})
 include_directories(
         ${LLVM_INCLUDE_DIRS}
         src/
-        src/analysis/
-        src/generator/
+        src/llvm/
+        src/llvm/analysis/
+        src/llvm/generator/
         src/system/
+        src/log/
 )
 set(SOURCES
         src/main.cc
         src/module.cc
         src/module.h
-        src/analysis/analysis.cc
-        src/analysis/analysis.h
+        src/llvm/analysis/analysis.cc
+        src/llvm/analysis/analysis.h
         src/type.h
-        src/analysis/cfg.h
-        src/pass_launcher.h
+        src/llvm/analysis/cfg.h
+        src/llvm/pass_launcher.h
         src/system/file.cc
         src/system/file.h
-        src/generator/fuzzer_generator.h
-        src/generator/fuzzer_generator.cc
+        src/llvm/generator/fuzzer_generator.h
+        src/llvm/generator/fuzzer_generator.cc
         src/system/virtual_mapper.cc
         src/system/virtual_mapper.h
-        src/generator/sanitizer.cc
-        src/generator/sanitizer.h
-        src/pass_launcher.cc
-        src/generator/name_corrector.cc
-        src/generator/name_corrector.h
+        src/llvm/generator/sanitizer.cc
+        src/llvm/generator/sanitizer.h
+        src/llvm/pass_launcher.cc
+        src/llvm/generator/name_corrector.cc
+        src/llvm/generator/name_corrector.h
         src/system/compiler.cc
         src/system/compiler.h
         src/utils.cc
         src/utils.h
         src/system/source_wrapper.cc
         src/system/source_wrapper.h
+        src/log/logger.h
         )
 
 #
