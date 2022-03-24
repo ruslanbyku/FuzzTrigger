@@ -24,28 +24,29 @@ public:
     File& operator=(File&&) noexcept;
 
     // Check the descriptor current status (if the file is open)
-    explicit operator bool() const;
+    explicit operator bool() const noexcept;
 
-    std::string GetPath() const;
-    bool        Exists() const;
-    void        Close();
-    void        Delete();
+    std::string GetPath() const noexcept;
+    bool        Exists() const noexcept;
+    void        Close() noexcept;
+    void        Delete() noexcept;
 
-    bool        IsAbsolute() const;
-    FileType    GetFileType() const;
-    std::string GetParentPath() const;
-    std::string GetName() const;
-    std::string GetStem() const;
-    std::string GetExtension() const;
-    uint64_t    GetSize() const;
-    bool        ReplaceName(const std::string&);
-    bool        ReplaceExtension(const std::string&);
-    bool        Copy(const std::string&);
+    bool        IsAbsolute() const noexcept;
+    FileType    GetFileType() const noexcept;
+    std::string GetAbsolute() const noexcept;
+    std::string GetParentPath() const noexcept;
+    std::string GetName() const noexcept;
+    std::string GetStem() const noexcept;
+    std::string GetExtension() const noexcept;
+    uint64_t    GetSize() const noexcept;
+    bool        ReplaceName(const std::string&) noexcept;
+    bool        ReplaceExtension(const std::string&) noexcept;
+    bool        Copy(const std::string&) const noexcept;
 
     int32_t     OpenForReadOnly();
     int32_t     Create();
-    bool        CreateDirectory();
-    int64_t     Write(const std::string&, uint64_t);
+    bool        CreateDirectory() const noexcept;
+    int64_t     Write(const std::string&, uint64_t) const;
 
 private:
     std::filesystem::path path_;

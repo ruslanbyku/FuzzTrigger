@@ -33,7 +33,7 @@ File& File::operator=(File&& file) noexcept {
     return *this;
 }
 
-File::operator bool() const {
+File::operator bool() const noexcept {
     if (descriptor_ > -1) {
         return true; // Set
     }
@@ -41,11 +41,11 @@ File::operator bool() const {
     return false; // Unset
 }
 
-std::string File::GetPath() const {
+std::string File::GetPath() const noexcept {
     return path_.string();
 }
 
-bool File::IsAbsolute() const {
+bool File::IsAbsolute() const noexcept {
     if (!path_.empty()) {
         return path_.is_absolute();
     }
@@ -53,7 +53,7 @@ bool File::IsAbsolute() const {
     return false;
 }
 
-void File::Close() {
+void File::Close() noexcept {
     // Check if the file descriptor is set
     if (*this) {
         // The file descriptor is set, close it
@@ -66,11 +66,14 @@ void File::Close() {
     }
 }
 
-void File::Delete() {
+void File::Delete() noexcept {
     Close();
 
     if (!path_.empty()) {
-        if (!std::filesystem::remove(path_)) {
+        std::error_code error_code;
+        bool result = std::filesystem::remove(path_, error_code);
+
+        if (!result) {
             // An error occurred when deleting a file, probably there is
             // already no such file, not a problem
         }
@@ -80,12 +83,27 @@ void File::Delete() {
     }
 }
 
-bool File::Exists() const {
-    return std::filesystem::exists(path_);
+bool File::Exists() const noexcept {
+    std::error_code error_code;
+    bool result = std::filesystem::exists(path_, error_code);
+
+    if (static_cast<bool>(error_code)) { // Error
+        return false;
+    }
+
+    return result;
 }
 
-FileType File::GetFileType() const {
-    switch (std::filesystem::status(path_).type()) {
+FileType File::GetFileType() const noexcept {
+    std::error_code error_code;
+    std::filesystem::file_type type =
+            std::filesystem::status(path_, error_code).type();
+
+    if (static_cast<bool>(error_code)) { // Error
+        return FILETYPE_UNKNOWN;
+    }
+
+    switch (type) {
         default:
             return FILETYPE_UNKNOWN;
         case std::filesystem::file_type::regular:
@@ -96,7 +114,24 @@ FileType File::GetFileType() const {
     }
 }
 
-std::string File::GetParentPath() const {
+std::string File::GetAbsolute() const noexcept {
+    if (!path_.empty()) {
+        if (IsAbsolute()) {
+            return path_.string();
+        }
+
+        std::error_code error_code;
+        std::string absolute(std::filesystem::absolute(path_, error_code));
+
+        if (!static_cast<bool>(error_code)) { // Success
+            return absolute;
+        }
+    }
+
+    return {};
+}
+
+std::string File::GetParentPath() const noexcept {
     if (!path_.empty()) {
         if (path_.has_parent_path()) {
             return path_.parent_path().string();
@@ -106,7 +141,7 @@ std::string File::GetParentPath() const {
     return {};
 }
 
-std::string File::GetName() const {
+std::string File::GetName() const noexcept {
     if (!path_.empty()) {
         if (path_.has_filename()) {
             return path_.filename().string();
@@ -116,7 +151,7 @@ std::string File::GetName() const {
     return {};
 }
 
-std::string File::GetStem() const {
+std::string File::GetStem() const noexcept {
     if (!path_.empty()) {
         if (path_.has_stem()) {
             return path_.stem().string();
@@ -126,7 +161,7 @@ std::string File::GetStem() const {
     return {};
 }
 
-std::string File::GetExtension() const {
+std::string File::GetExtension() const noexcept {
     if (!path_.empty()) {
         if (path_.has_extension()) {
             return path_.extension().string();
@@ -136,15 +171,20 @@ std::string File::GetExtension() const {
     return {};
 }
 
-uint64_t File::GetSize() const {
+uint64_t File::GetSize() const noexcept {
     if (!path_.empty()) {
-        std::filesystem::file_size(path_);
+        std::error_code error_code;
+        uint64_t size = std::filesystem::file_size(path_, error_code);
+
+        if (!static_cast<bool>(error_code)) { // Success
+            return size;
+        }
     }
 
     return 0;
 }
 
-bool File::ReplaceName(const std::string& new_name) {
+bool File::ReplaceName(const std::string& new_name) noexcept {
     if (!path_.empty()) {
         path_.replace_filename(new_name);
 
@@ -154,7 +194,7 @@ bool File::ReplaceName(const std::string& new_name) {
     return false;
 }
 
-bool File::ReplaceExtension(const std::string& extension) {
+bool File::ReplaceExtension(const std::string& extension) noexcept {
     if (!path_.empty()) {
         path_.replace_extension(extension);
 
@@ -164,11 +204,14 @@ bool File::ReplaceExtension(const std::string& extension) {
     return false;
 }
 
-bool File::Copy(const std::string& new_path) {
+bool File::Copy(const std::string& new_path) const noexcept {
     if (!path_.empty()) {
-        std::filesystem::copy_file(path_, new_path);
+        std::error_code error_code;
+        bool result = std::filesystem::copy_file(path_, new_path, error_code);
 
-        return true;
+        if (!static_cast<bool>(error_code)) { // Success
+            return result;
+        }
     }
 
     return false;
@@ -210,16 +253,21 @@ int32_t File::Open(int32_t flags, uint32_t mode) {
     return file_descriptor;
 }
 
-bool File::CreateDirectory() {
+bool File::CreateDirectory() const noexcept {
     if (!path_.empty()) {
+        std::error_code error_code;
         // Create all parent directories that do not exist
-        return std::filesystem::create_directories(path_);
+        bool result = std::filesystem::create_directories(path_, error_code);
+
+        if (!static_cast<bool>(error_code)) { // Success
+            return result;
+        }
     }
 
     return false;
 }
 
-int64_t File::Write(const std::string& data, uint64_t size) {
+int64_t File::Write(const std::string& data, uint64_t size) const {
     // If the file descriptor is closed
     if (!*this) {
         return -1;

@@ -3,8 +3,9 @@
 SourceWrapper::SourceWrapper(std::string source_file_path, bool auto_deletion,
                              bool random_on)
 : source_file_(std::move(source_file_path)),
+ir_source_file_(source_file_),
 working_directory_(source_file_.GetParentPath()),
-module_dump_(std::make_unique<Module>()), ir_source_file_(source_file_),
+module_dump_(std::make_unique<Module>()),
 auto_deletion_(auto_deletion), random_on_(random_on) {
     InitializeState();
 }

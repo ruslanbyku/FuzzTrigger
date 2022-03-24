@@ -25,11 +25,10 @@ public:
 
 private:
     File                    source_file_;
-    std::string             working_directory_;
-    std::unique_ptr<Module> module_dump_;
     File                    ir_source_file_;
+    std::string             working_directory_;
     std::string             result_directory_path_;
-
+    std::unique_ptr<Module> module_dump_;
 
     bool                    auto_deletion_;
     std::vector<File>       garbage_;
