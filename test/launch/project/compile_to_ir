@@ -1,0 +1,11 @@
+#!/bin/bash
+
+clang -emit-llvm main.c -S -o main.ll > /dev/null 2>&1
+clang -emit-llvm sanitize_cookie_path.c -S -o sanitize_cookie_path.ll > /dev/null 2>&1
+clang -emit-llvm copy_input.c -S -o copy_input.ll > /dev/null 2>&1
+
+llvm-link main.ll sanitize_cookie_path.ll copy_input.ll -S -o target.ll > /dev/null 2>&1
+
+rm main.ll
+rm sanitize_cookie_path.ll
+rm copy_input.ll
