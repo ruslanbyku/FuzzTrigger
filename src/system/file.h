@@ -14,6 +14,11 @@ enum FileType: uint8_t {
     FILETYPE_DIRECTORY
 };
 
+// Additional resources for error handling:
+// https://stackoverflow.com/a/48614155
+// http://blog.think-async.com/2010/04/system-error-support-in-c0x-part-2.html
+//
+
 class File {
 public:
     explicit File(std::string);
@@ -44,7 +49,9 @@ public:
     bool        Copy(const std::string&) const noexcept;
 
     int32_t     OpenForReadOnly();
-    int32_t     Create();
+    int32_t     OpenForWrite();
+    int32_t     OpenForAppend();
+
     bool        CreateDirectory() const noexcept;
     int64_t     Write(const std::string&, uint64_t) const;
 
@@ -52,6 +59,7 @@ private:
     std::filesystem::path path_;
     int32_t               descriptor_;
 
+    int32_t Create(int32_t);
     int32_t Open(int32_t, uint32_t);
 };
 

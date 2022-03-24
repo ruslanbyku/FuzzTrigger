@@ -21,10 +21,13 @@ const char* const log_level_string[] = {
         "DEBUG"
 };
 
+// Additional resources about logger:
+// https://stackoverflow.com/a/5028917
+//
+
 // ------------------------------------------------------------------------- //
 //                              Logger class                                 //
 // ------------------------------------------------------------------------- //
-// https://stackoverflow.com/a/5028917
 template <typename T>
 class Logger {
 public:

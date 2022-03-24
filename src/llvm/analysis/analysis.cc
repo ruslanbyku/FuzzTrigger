@@ -167,10 +167,11 @@ bool Analysis::DumpModuleFunctions(llvm::Module& module,
 
     // Find non-dependant functions (from other functions or global values)
     FindStandaloneFunctions(module, adjacency_list);
-    if (standalone_functions_.empty()) {
+
+    //if (standalone_functions_.empty()) {
         // There are no sought functions, abort the analysis
-        return false;
-    }
+    //    return false;
+    //}
 
     // Save the number of standalone functions
     module_dump_->standalone_funcs_number_ = standalone_functions_.size();

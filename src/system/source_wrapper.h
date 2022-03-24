@@ -13,8 +13,10 @@
 
 class SourceWrapper {
 public:
-    explicit SourceWrapper(std::string, bool auto_deletion = true,
-                           bool random_on = false) noexcept(false);
+    explicit SourceWrapper(std::string,
+                           bool auto_deletion = true,
+                           bool random_on = false,
+                           bool override = true) noexcept(false);
     ~SourceWrapper();
     SourceWrapper(const SourceWrapper&)                = delete;
     SourceWrapper& operator=(const SourceWrapper&)     = delete;
@@ -33,6 +35,7 @@ private:
     bool                    auto_deletion_;
     std::vector<File>       garbage_;
     bool                    random_on_;
+    bool                    override_;
 
     void InitializeState();
 

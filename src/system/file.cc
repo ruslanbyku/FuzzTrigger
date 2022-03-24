@@ -221,8 +221,24 @@ int32_t File::OpenForReadOnly() {
     return Open(O_RDONLY, 0);
 }
 
-int32_t File::Create() {
-    int32_t flags = O_WRONLY | O_CREAT;
+// If a file does not exist -> create
+// If a file exists         -> truncate (override) the existing one
+int32_t File::OpenForWrite() {
+    int32_t flags = O_WRONLY | O_CREAT | O_TRUNC;
+
+    return Create(flags);
+}
+
+// If a file does not exist -> create
+// If a file exists         -> append to the existing one
+int32_t File::OpenForAppend() {
+    int32_t flags = O_WRONLY | O_CREAT | O_APPEND;
+
+    return Create(flags);
+}
+
+
+int32_t File::Create(int32_t flags) {
     // 0644 mode bits for a regular file creation
     uint32_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 
@@ -241,10 +257,6 @@ int32_t File::Open(int32_t flags, uint32_t mode) {
     int32_t file_descriptor = open(path_.c_str(), flags, mode);
 
     if (file_descriptor == -1) {
-        fprintf(stderr, "open() failed on [%s]: %s\n",
-                path_.c_str(),
-                strerror(errno));
-
         return -1;
     }
 
@@ -253,6 +265,8 @@ int32_t File::Open(int32_t flags, uint32_t mode) {
     return file_descriptor;
 }
 
+// If a directory does not exist -> create
+// If a directory exists         -> do nothing
 bool File::CreateDirectory() const noexcept {
     if (!path_.empty()) {
         std::error_code error_code;
@@ -278,7 +292,9 @@ int64_t File::Write(const std::string& data, uint64_t size) const {
         return -1;
     }
 
+    // Return number of data written to the file
     int64_t bytes = write(descriptor_, data.c_str(), size);
 
     return bytes;
 }
+
