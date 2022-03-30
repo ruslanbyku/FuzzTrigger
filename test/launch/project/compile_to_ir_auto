@@ -1,0 +1,9 @@
+#!/bin/bash
+
+export LLVM_COMPILER=clang
+CC=wllvm cmake .
+make
+unset LLVM_COMPILER
+extract-bc --manifest test_project
+llvm-dis test_project.bc -o test_project.ll
+mv test_project.llvm.manifest MANIFEST.txt

@@ -1,0 +1,33 @@
+#!/bin/bash
+
+flags_and_includes=" -Wall -Wextra -fno-rtti -std=gnu++20 -I/home/chinesegranny/CLionProjects/AutoFuzz/src -I/home/chinesegranny/CLionProjects/AutoFuzz/src/llvm -I/home/chinesegranny/CLionProjects/AutoFuzz/src/llvm/analysis -I/home/chinesegranny/CLionProjects/AutoFuzz/src/llvm/generator -I/home/chinesegranny/CLionProjects/AutoFuzz/src/system -I/home/chinesegranny/CLionProjects/AutoFuzz/src/log "
+
+clang++ $flags_and_includes -emit-llvm src/main.cc -S -o main.ll
+clang++ $flags_and_includes -emit-llvm src/module.cc -S -o module.ll
+clang++ $flags_and_includes -emit-llvm src/llvm/analysis/analysis.cc -S -o analysis.ll
+clang++ $flags_and_includes -emit-llvm src/system/file.cc -S -o file.ll
+clang++ $flags_and_includes -emit-llvm src/llvm/generator/fuzzer_generator.cc -S -o fuzzer_generator.ll
+clang++ $flags_and_includes -emit-llvm src/system/virtual_mapper.cc -S -o virtual_mapper.ll
+clang++ $flags_and_includes -emit-llvm src/llvm/generator/sanitizer.cc -S -o sanitizer.ll
+clang++ $flags_and_includes -emit-llvm src/llvm/pass_launcher.cc -S -o pass_launcher.ll
+clang++ $flags_and_includes -emit-llvm src/llvm/generator/name_corrector.cc -S -o name_corrector.ll
+clang++ $flags_and_includes -emit-llvm src/system/compiler.cc -S -o compiler.ll
+clang++ $flags_and_includes -emit-llvm src/utils.cc -S -o utils.ll
+clang++ $flags_and_includes -emit-llvm src/system/source_wrapper.cc -S -o source_wrapper.ll
+
+llvm-link main.ll module.ll analysis.ll file.ll fuzzer_generator.ll \
+virtual_mapper.ll sanitizer.ll pass_launcher.ll name_corrector.ll \
+compiler.ll utils.ll source_wrapper.ll -S -o AutoFuzz.ll
+
+rm main.ll
+rm module.ll
+rm analysis.ll
+rm file.ll
+rm fuzzer_generator.ll
+rm virtual_mapper.ll
+rm sanitizer.ll
+rm pass_launcher.ll
+rm name_corrector.ll
+rm compiler.ll
+rm utils.ll
+rm source_wrapper.ll
