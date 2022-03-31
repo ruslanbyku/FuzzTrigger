@@ -130,6 +130,9 @@ bool SourceWrapper::LaunchRoutine() {
         LOG(LOG_LEVEL_INFO) << "Analysis went successful.";
     }
 
+    // --------------------------------------------------------------------- //
+    //               Find number of found standalone functions               //
+    // --------------------------------------------------------------------- //
     if (module_dump_->standalone_funcs_number_ == 0) {
         if (LOGGER_ON) {
             LOG(LOG_LEVEL_INFO) << "There are no standalone functions. Abort.";
@@ -146,6 +149,36 @@ bool SourceWrapper::LaunchRoutine() {
                                     << " standalone functions.";
             }
         }
+    }
+
+    // --------------------------------------------------------------------- //
+    //   Open the source file in READ mode and load its content into memory  //
+    // --------------------------------------------------------------------- //
+    int32_t source_descriptor = source_file_.OpenForReadOnly();
+    if (source_descriptor == -1) {
+        // Can not open file
+        return false;
+    }
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Open source file "
+                            << source_file_.GetPath() << " with fd = "
+                            << source_descriptor << ".";
+    }
+
+    auto source_file_size = static_cast<int32_t>(source_file_.GetSize());
+    bool mapper_result = memory_.AllocateReadMap(
+            source_descriptor,
+            source_file_size
+            );
+    if (!mapper_result) {
+        // Can not load file into memory
+        return false;
+    }
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Load source file content "
+                            << source_file_.GetPath() << " into memory.";
     }
 
     // --------------------------------------------------------------------- //
@@ -180,7 +213,11 @@ bool SourceWrapper::LaunchRoutine() {
 
     // Analysis is ready, module_dump has been filled
     for (auto& function: module_dump_->functions_) {
-        if (function->name_ != "sanitize_cookie_path") {
+        if (function->name_ != "BufferOverRead") {
+            continue;
+        }
+
+        if (!function->is_standalone_) {
             continue;
         }
 
@@ -194,6 +231,18 @@ bool SourceWrapper::LaunchRoutine() {
     if (LOGGER_ON) {
         LOG(LOG_LEVEL_INFO) << "Fuzzer generation process went successful.";
     }
+
+    // --------------------------------------------------------------------- //
+    //         Unload the source from memory and close the file              //
+    // --------------------------------------------------------------------- //
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Unload " << source_file_.GetPath()
+                            << " from memory.";
+        LOG(LOG_LEVEL_INFO) << "Close fd= " << source_descriptor << ".";
+    }
+
+    memory_.Unmap();
+    source_file_.Close();
 
     return true;
 }
@@ -245,7 +294,8 @@ bool SourceWrapper::PerformGeneration(
     ir_function_path += function_directory_path;
     ir_function_path += function_dump->name_;
     ir_function_path += ir_extension;
-    if (!ir_source_file_.Copy(ir_function_path)) {
+
+    if (!ir_source_file_.Copy(ir_function_path, override_)) {
         return false;
     }
 
@@ -272,16 +322,53 @@ bool SourceWrapper::PerformGeneration(
     }
 
     // --------------------------------------------------------------------- //
+    //            Find function declaration in the source file               //
+    // --------------------------------------------------------------------- //
+    FunctionLocation function_location(function_dump->name_);
+    if (!source_file_) {
+        // The source file is not open
+        return false;
+    }
+
+    if (!memory_) {
+        // The file content is not loaded into memory
+        return false;
+    }
+
+    std::string source_content = memory_.GetMapping();
+    clang::tooling::runToolOnCode(
+            std::make_unique<FrontendAction>(function_location),
+            source_content
+            );
+
+    if (!function_location.is_filled_) {
+        // Function was not found in the source file
+        return false;
+    }
+
+    if (function_location.entity_.empty()) {
+        // Function declaration was not set
+        return false;
+    }
+
+    std::string function_declaration(function_location.entity_);
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Function declaration for "
+                            << function_dump->name_ << " is found.";
+    }
+
+    // --------------------------------------------------------------------- //
     //                       Generate fuzzer stub code                       //
     // --------------------------------------------------------------------- //
     std::string fuzzer_content;
-    std::string declaration("static char* sanitize_cookie_path(const char* cookie_path);");
-    FuzzerGenerator fuzzer_generator(declaration, function_dump);
+    FuzzerGenerator fuzzer_generator(function_declaration, function_dump);
     fuzzer_generator.Generate();
     fuzzer_content = fuzzer_generator.GetFuzzer();
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Fuzzer data has been generated.";
+        LOG(LOG_LEVEL_INFO) << "Fuzzer data for " << function_dump->name_
+                            << " has been generated.";
     }
 
     // --------------------------------------------------------------------- //
@@ -302,9 +389,7 @@ bool SourceWrapper::PerformGeneration(
     //                   Compile fuzzer stub file to IR                      //
     // --------------------------------------------------------------------- //
     if (!Compiler::IsCompilable(fuzzer_stub_file)) {
-        fprintf(stderr, "File [%s] can not be compiled\n",
-                fuzzer_stub_file.GetPath().c_str());
-
+        // Can not compile the file
         return false;
     }
     File ir_fuzzer_stub_file(fuzzer_stub_path);

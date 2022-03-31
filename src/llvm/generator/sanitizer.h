@@ -10,12 +10,14 @@
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Support/FileSystem.h>
 #include <llvm/IR/Operator.h>
+#include <llvm/IR/Verifier.h>
 
 class Sanitizer : public llvm::ModulePass {
 public:
     static char ID;  // Declare for Pass internal operations
 
-    explicit Sanitizer(const std::unique_ptr<Function>&);
+    explicit Sanitizer(const std::unique_ptr<Function>&,
+                                                       bool&, bool deep = true);
 
     // Explicitly specify what kind of pass has to be done on the run.
     llvm::StringRef getPassName() const override;
@@ -26,13 +28,20 @@ private:
     const std::unique_ptr<Function>& function_dump_;
     llvm::Function*                  target_function_;
 
+    bool&                            success_;
+    bool                             deep_;
+
     void SanitizeModule(llvm::Module&);
     void FindGlobalsToDelete(llvm::Module&, std::set<llvm::GlobalVariable*>&);
     void FindFunctionsToDelete(llvm::Module&, std::set<llvm::Function*>&);
-    void FindStringLiterals(const llvm::Function&,
-                            std::set<const llvm::GlobalVariable*>&);
+
+    bool IsNative(const llvm::GlobalVariable&);
+    bool DigIntoConstant(const llvm::ConstantExpr*);
+    bool IsFunctionMember(const llvm::Instruction&);
+
     void ResolveLinkage();
 
+    bool IsModuleValid(llvm::Module&);
     void UpdateIRModule(llvm::Module&);
     void Debug(llvm::Module&);
 };

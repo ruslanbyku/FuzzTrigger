@@ -37,7 +37,7 @@ void VirtualMapper::Unmap() {
     if (*this) {
 
         if (munmap(mapping_, size_) == -1) {
-
+            // File content is not in memory anymore
         }
 
         mapping_    = nullptr;

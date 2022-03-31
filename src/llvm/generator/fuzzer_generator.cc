@@ -102,8 +102,9 @@ bool FuzzerGenerator::GenerateArguments(std::string& arguments) {
                 arguments += "(void*) data";
                 break;
             case TYPE_INT8: {
-                // Get rid of const
-                arguments += "(const char*) data";
+                // Cast from const to a regular type for compiling
+                // compatibility reasons
+                arguments += "(char*) data";
             }
             default:
                 break;

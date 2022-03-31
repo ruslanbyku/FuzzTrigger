@@ -123,7 +123,10 @@ char *copy_input(char *user_supplied_string){
 //
 // NIST CWE 126, Example 3 (https://cwe.mitre.org/data/definitions/119.html)
 //
-void BufferOverRead() {
+void BufferOverRead()
+
+
+{
     char *items[] = {"boat", "car", "truck", "train"};
     int index = 10/*GetUntrustedOffset()*/;
     printf("You selected %s\n", items[index-1]);

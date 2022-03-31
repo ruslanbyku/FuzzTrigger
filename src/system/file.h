@@ -46,7 +46,7 @@ public:
     uint64_t    GetSize() const noexcept;
     bool        ReplaceName(const std::string&) noexcept;
     bool        ReplaceExtension(const std::string&) noexcept;
-    bool        Copy(const std::string&) const noexcept;
+    bool        Copy(const std::string&, bool override = false) const noexcept;
 
     int32_t     OpenForReadOnly();
     int32_t     OpenForWrite();

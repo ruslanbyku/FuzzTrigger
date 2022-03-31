@@ -5,13 +5,17 @@ cmake_minimum_required(VERSION 3.21)
 project(AutoFuzz)
 set(CMAKE_CXX_STANDARD 20)
 
-#set(CMAKE_VERBOSE_MAKEFILE on)
-
 #
 # Find LLVM API (https://llvm.org/docs/CMake.html#id18)
 #
 find_package(LLVM REQUIRED)
 add_definitions(${LLVM_DEFINITIONS_LIST})
+
+#
+# Find Clang API
+#
+# https://bugs.archlinux.org/task/66283#comments
+find_library(clang_lib clang)
 
 include_directories(
         ${LLVM_INCLUDE_DIRS}
@@ -49,6 +53,8 @@ set(SOURCES
         src/system/source_wrapper.cc
         src/system/source_wrapper.h
         src/log/logger.h
+        src/llvm/generator/frontend_action.h
+        src/llvm/generator/frontend_action.cc
         )
 
 #
@@ -64,7 +70,7 @@ add_executable(AutoFuzz ${SOURCES})
 #
 # Link LLVM
 #
-target_link_libraries(AutoFuzz LLVM)
+target_link_libraries(AutoFuzz LLVM ${clang_lib})
 
 #
 # Debug messages
@@ -73,4 +79,5 @@ message(STATUS "CXX_FLAGS:            ${CMAKE_CXX_FLAGS}")
 message(STATUS "LLVM API version:     ${LLVM_PACKAGE_VERSION}")
 message(STATUS "LLVMConfig.cmake in:  ${LLVM_DIR}")
 message(STATUS "LLVM header files in: ${LLVM_INCLUDE_DIRS}")
+message(STATUS "CLANG lib:            ${clang_lib}")
 message(STATUS "Complete.\n")

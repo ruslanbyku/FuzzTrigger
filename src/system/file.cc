@@ -204,10 +204,19 @@ bool File::ReplaceExtension(const std::string& extension) noexcept {
     return false;
 }
 
-bool File::Copy(const std::string& new_path) const noexcept {
+bool File::Copy(const std::string& new_path, bool override) const noexcept {
     if (!path_.empty()) {
         std::error_code error_code;
-        bool result = std::filesystem::copy_file(path_, new_path, error_code);
+        bool result;
+
+        if (override) {
+            auto override_option =
+                    std::filesystem::copy_options::overwrite_existing;
+            result = std::filesystem::copy_file(path_, new_path,
+                                                override_option, error_code);
+        } else {
+            result = std::filesystem::copy_file(path_, new_path, error_code);
+        }
 
         if (!static_cast<bool>(error_code)) { // Success
             return result;

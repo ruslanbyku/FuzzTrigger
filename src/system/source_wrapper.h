@@ -1,11 +1,13 @@
 #ifndef AUTOFUZZ_SOURCE_WRAPPER_H
 #define AUTOFUZZ_SOURCE_WRAPPER_H
 
+#include "frontend_action.h"
 #include "fuzzer_generator.h"
 #include "pass_launcher.h"
 #include "module.h"
 #include "utils.h"
 #include "compiler.h"
+#include "virtual_mapper.h"
 #include "file.h"
 #include "logger.h"
 
@@ -31,6 +33,8 @@ private:
     std::string             working_directory_;
     std::string             result_directory_path_;
     std::unique_ptr<Module> module_dump_;
+
+    VirtualMapper           memory_;
 
     bool                    auto_deletion_;
     std::vector<File>       garbage_;
