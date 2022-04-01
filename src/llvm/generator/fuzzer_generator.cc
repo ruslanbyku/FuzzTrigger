@@ -1,16 +1,5 @@
 #include "fuzzer_generator.h"
 
-std::string headers = R"(#include <cstdio>
-#include <cstdint>
-)";
-
-std::string fuzzer_stub = R"(
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-    $[fuzzer_body]$
-    return 0;
-}
-)";
-
 FuzzerGenerator::FuzzerGenerator(std::string function_declaration,
                                  const std::unique_ptr<Function>& function_dump)
 : function_declaration_(std::move(function_declaration)),
@@ -21,39 +10,46 @@ const std::string &FuzzerGenerator::GetFuzzer() const {
 }
 
 bool FuzzerGenerator::Generate() {
-    std::string body;
-    bool result = GenerateFuzzerBody(body);
-    if (!result) {
+    std::pair<bool, std::string> result = GenerateFuzzerBody();
+    if (!result.first) {
+        // An error occurred during generation
         return false;
     }
-    InsertFuzzerBody(body);
 
-    fuzzer_ += headers;
+    if (!InsertFuzzerBody(result.second)) {
+        // Can not insert the body, nothing to insert
+        return false;
+    }
+
+    fuzzer_ += HEADERS;
     fuzzer_ += function_declaration_;
-    fuzzer_ += fuzzer_stub;
+    fuzzer_ += FUZZER_STUB;
 
     return true;
 }
 
-bool FuzzerGenerator::GenerateFuzzerBody(std::string& body) {
+std::pair<bool, std::string> FuzzerGenerator::GenerateFuzzerBody() {
+    std::string body;
+
     body += "(void) ";
     body += function_dump_->name_;
     body += "(";
 
-    std::string arguments;
-    bool result = GenerateArguments(arguments);
-    if (!result) {
+    std::pair<bool, std::string> result = GenerateArguments();
+    if (!result.first) {
         // Some arguments are unsupported
-        return false;
+        return std::make_pair(false, body);
     }
-    body += arguments;
+    body += result.second;
 
     body += ");";
 
-    return true;
+    return std::make_pair(true, body);
 }
 
-bool FuzzerGenerator::GenerateArguments(std::string& arguments) {
+std::pair<bool, std::string> FuzzerGenerator::GenerateArguments() {
+    std::string arguments;
+
     for (const auto& argument: function_dump_->arguments_) {
         bool is_pointer        = argument->type_->pointer_depth_ > 0;
         uint8_t pointer_depth  = argument->type_->pointer_depth_;
@@ -61,7 +57,7 @@ bool FuzzerGenerator::GenerateArguments(std::string& arguments) {
 
         // Do not support more than one asterisk (**)
         if (pointer_depth > 1) {
-            return false;
+            return std::make_pair(false, "");
         }
 
         // Get rid of the types that are not supported
@@ -86,7 +82,7 @@ bool FuzzerGenerator::GenerateArguments(std::string& arguments) {
         // Do no know how to work with a function that has unsupported
         // argument types
         if (!is_supported) {
-            return false;
+            return std::make_pair(false, "");
         }
 
         // TYPE_VOID and TYPE_INT8
@@ -94,7 +90,7 @@ bool FuzzerGenerator::GenerateArguments(std::string& arguments) {
         // Check if the type is a pointer
         if (!is_pointer) {
             // Not a pointer
-            return false;
+            return std::make_pair(false, "");
         }
 
         switch (argument_type) {
@@ -113,13 +109,22 @@ bool FuzzerGenerator::GenerateArguments(std::string& arguments) {
         arguments += ",";
     }
 
-    // Delete the last comma
-    arguments.pop_back();
+    if (!arguments.empty()) {
+        // If the arguments are not empty, at least one iteration was made -
+        // at least one argument was created
+        arguments.pop_back(); // Delete the last comma
+    }
 
-    return true;
+    return std::make_pair(true, arguments);
 }
 
-void FuzzerGenerator::InsertFuzzerBody(std::string& body) {
+bool FuzzerGenerator::InsertFuzzerBody(std::string& body) {
+    if (body.empty()) {
+        return false;
+    }
+
     std::regex pattern(R"(\$\[fuzzer_body\]\$)", std::regex::ECMAScript);
-    fuzzer_stub = std::regex_replace(fuzzer_stub, pattern, body);
+    FUZZER_STUB = std::regex_replace(FUZZER_STUB, pattern, body);
+
+    return true;
 }

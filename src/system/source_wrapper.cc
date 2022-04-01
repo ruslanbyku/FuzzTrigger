@@ -213,18 +213,19 @@ bool SourceWrapper::LaunchRoutine() {
 
     // Analysis is ready, module_dump has been filled
     for (auto& function: module_dump_->functions_) {
-        if (function->name_ != "BufferOverRead") {
-            continue;
-        }
-
         if (!function->is_standalone_) {
             continue;
         }
 
         bool generation_result = PerformGeneration(function);
         if (!generation_result) {
-            // Do not know what to do so far
-            return false;
+            if (LOGGER_ON) {
+                LOG(LOG_LEVEL_ERROR)
+                << "Something went wrong when generating fuzzer for "
+                << function->name_ << ". Continue.";
+            }
+
+            continue;
         }
     }
 
@@ -238,7 +239,7 @@ bool SourceWrapper::LaunchRoutine() {
     if (LOGGER_ON) {
         LOG(LOG_LEVEL_INFO) << "Unload " << source_file_.GetPath()
                             << " from memory.";
-        LOG(LOG_LEVEL_INFO) << "Close fd= " << source_descriptor << ".";
+        LOG(LOG_LEVEL_INFO) << "Close fd = " << source_descriptor << ".";
     }
 
     memory_.Unmap();
@@ -263,17 +264,32 @@ bool SourceWrapper::PerformAnalysis() {
 
 bool SourceWrapper::PerformGeneration(
                               const std::unique_ptr<Function>& function_dump) {
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Generate fuzzer for "
+                            << function_dump->name_ << "(...).";
+    }
+
+    // --------------------------------------------------------------------- //
+    //     Check whether a standalone function is qualified to be fuzzed     //
+    // --------------------------------------------------------------------- //
+    // If a standalone function has no argument for input, there is no point in
+    // making a fuzzer for it
+    if (function_dump->arguments_number_ == 0) {
+        if (LOGGER_ON) {
+            LOG(LOG_LEVEL_INFO) << "Function "
+                                << function_dump->name_
+                                << " has no input arguments. Abort.";
+        }
+
+        return true;
+    }
+
     // --------------------------------------------------------------------- //
     //        Create a directory to store data about the function            //
     // --------------------------------------------------------------------- //
     //
     bool result;
     std::string function_directory_path;
-
-    if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Generate fuzzer for "
-                            << function_dump->name_ << "(...).";
-    }
 
     ConstructFunctionDirectoryPath(
             function_dump->name_, function_directory_path);
@@ -310,6 +326,11 @@ bool SourceWrapper::PerformGeneration(
     // --------------------------------------------------------------------- //
     //                     Sanitize the IR function file                     //
     // --------------------------------------------------------------------- //
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Launch sanitization for "
+                            << ir_function_path << ".";
+    }
+
     PassLauncher pass_on_function_ir(ir_function_path);
     result = pass_on_function_ir.LaunchSanitizer(function_dump);
     if (!result) {
@@ -324,6 +345,12 @@ bool SourceWrapper::PerformGeneration(
     // --------------------------------------------------------------------- //
     //            Find function declaration in the source file               //
     // --------------------------------------------------------------------- //
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Find declaration for "
+                            << function_dump->name_ << " in "
+                            << source_file_.GetPath() << ".";
+    }
+
     FunctionLocation function_location(function_dump->name_);
     if (!source_file_) {
         // The source file is not open
@@ -354,25 +381,30 @@ bool SourceWrapper::PerformGeneration(
     std::string function_declaration(function_location.entity_);
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Function declaration for "
+        LOG(LOG_LEVEL_INFO) << "Declaration for "
                             << function_dump->name_ << " is found.";
     }
 
     // --------------------------------------------------------------------- //
     //                       Generate fuzzer stub code                       //
     // --------------------------------------------------------------------- //
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Generate fuzzer stub data for "
+                            << function_dump->name_ << ".";
+    }
+
     std::string fuzzer_content;
     FuzzerGenerator fuzzer_generator(function_declaration, function_dump);
     fuzzer_generator.Generate();
     fuzzer_content = fuzzer_generator.GetFuzzer();
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Fuzzer data for " << function_dump->name_
+        LOG(LOG_LEVEL_INFO) << "Fuzzer stub data for " << function_dump->name_
                             << " has been generated.";
     }
 
     // --------------------------------------------------------------------- //
-    //        Create the fuzzer stub file and write fuzzer code to it        //
+    //     Create the fuzzer stub (.cc file) and write fuzzer code to it     //
     // --------------------------------------------------------------------- //
     std::string fuzzer_stub_path;
     ConstructFuzzerStubPath(function_dump->name_,
@@ -382,6 +414,12 @@ bool SourceWrapper::PerformGeneration(
     if (!result) {
         return false;
     }
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Fuzzer stub file " << fuzzer_stub_path
+                            << " has been created.";
+    }
+
     // Put the file into the garbage right away after the creation
     PlaceIntoGarbage(fuzzer_stub_file);
 
@@ -440,11 +478,15 @@ bool SourceWrapper::PerformGeneration(
     File final_executable_file(fuzzer_executable_path);
 
     // Compile all bits and pieces
-    Compiler::CompileToFuzzer(
+    result = Compiler::CompileToFuzzer(
             ir_function_file,
             ir_fuzzer_stub_file,
             final_executable_file
             );
+
+    if (!result) {
+        return false;
+    }
 
     if (LOGGER_ON) {
         LOG(LOG_LEVEL_INFO) << "Executable "

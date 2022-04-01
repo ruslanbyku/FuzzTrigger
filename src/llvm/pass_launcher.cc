@@ -42,6 +42,10 @@ bool PassLauncher::LaunchSanitizer(
     llvm::legacy::PassManager pass_manager;
     bool status = false;
 
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Deep sanitization launched.";
+    }
+
     // Run the sanitizer pass (first run is a deep sanitization)
     pass_manager.add(new Sanitizer(function_dump, status));
     pass_manager.run(*module);
@@ -49,6 +53,13 @@ bool PassLauncher::LaunchSanitizer(
     // Check status of the sanitizer pass
     // Relaunch the pass with GlobalVariable sanitization off (deep = false)
     if (!status) {
+        if (LOGGER_ON) {
+            LOG(LOG_LEVEL_WARNING) << "Deep sanitization for "
+                                   << function_dump->name_ << " failed.";
+            LOG(LOG_LEVEL_INFO) << "Launch shallow sanitization for "
+                                << function_dump->name_ << ".";
+        }
+
         pass_manager.add(new Sanitizer(function_dump, status, false));
         pass_manager.run(*module);
     }
@@ -68,10 +79,13 @@ bool PassLauncher::LaunchNameCorrector(
         return false;
     }
 
-    // Register the pass and run it
+    // Register the pass manager to run a pass
     llvm::legacy::PassManager pass_manager;
-    pass_manager.add(new NameCorrector(function_dump));
+    bool status = false;
+
+    // Run the name mangling pass
+    pass_manager.add(new NameCorrector(function_dump, status));
     pass_manager.run(*module);
 
-    return true;
+    return status;
 }

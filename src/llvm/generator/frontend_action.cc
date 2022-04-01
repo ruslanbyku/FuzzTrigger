@@ -34,11 +34,19 @@ bool FrontendVisitor::VisitFunctionDecl(clang::FunctionDecl* declaration) {
             context_->getLangOpts()
             );
 
-    // Dump function's data
-    function_location_.entity_    =
-            code_snippet.substr(0, code_snippet.size() - 1).str();
-    function_location_.entity_   += ";";
-    function_location_.is_filled_ = true;
+    uint64_t position = code_snippet.str().rfind(')');
+    if (position == std::string::npos) {
+        // No function declaration was found
+        function_location_.entity_    = "";
+        function_location_.is_filled_ = false;
+    } else {
+        // Dump function's data
+        std::string function_declaration =
+                code_snippet.substr(0, position + 1).str();
+        function_declaration += ";";
+        function_location_.entity_    = function_declaration;
+        function_location_.is_filled_ = true;
+    }
 
     // Stop the traversal of the AST
     return false;

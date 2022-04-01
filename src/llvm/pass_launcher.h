@@ -4,6 +4,7 @@
 #include "analysis.h"
 #include "sanitizer.h"
 #include "name_corrector.h"
+#include "logger.h"
 
 #include <exception>
 

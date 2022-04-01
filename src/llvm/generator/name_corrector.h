@@ -6,12 +6,13 @@
 #include <llvm/Pass.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Instructions.h>
+#include <llvm/IR/Verifier.h>
 
 class NameCorrector : public llvm::ModulePass {
 public:
     static char ID;  // Declare for Pass internal operations
 
-    explicit NameCorrector(const std::unique_ptr<Function>&);
+    explicit NameCorrector(const std::unique_ptr<Function>&, bool&);
 
     // Explicitly specify what kind of pass has to be done on the run.
     llvm::StringRef getPassName() const override;
@@ -21,6 +22,9 @@ public:
 private:
     const std::unique_ptr<Function>& function_dump_;
 
+    bool&                            success_;
+
+    bool IsModuleValid(llvm::Module&);
     void UpdateIRModule(llvm::Module&);
     void Debug(llvm::Module&);
 };
