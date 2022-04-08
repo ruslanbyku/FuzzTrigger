@@ -12,10 +12,17 @@ find_package(LLVM REQUIRED)
 add_definitions(${LLVM_DEFINITIONS_LIST})
 
 #
-# Find Clang API
+# Find Clang API (https://bugs.archlinux.org/task/66283#comments)
 #
-# https://bugs.archlinux.org/task/66283#comments
-find_library(clang_lib clang)
+# NOTE:
+# Having one CMakeLists.txt may lead to different compilation results.
+#
+# Using just clang instead of clang-cpp CLion automatically links to the right
+# library - libclang-cpp.so, but when compile manually with cmake/make an
+# error occurs - libclang.so is used, what is unacceptable for C++.
+#
+# To avoid such conduct, state explicitly clang-cpp to find libclang-cpp.so.
+find_library(clang_lib clang-cpp)
 
 include_directories(
         ${LLVM_INCLUDE_DIRS}

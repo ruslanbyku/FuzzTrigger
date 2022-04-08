@@ -71,8 +71,9 @@ FrontendAction::FrontendAction(FunctionLocation& function_location)
 : clang::ASTFrontendAction(), function_location_(function_location) {}
 
 std::unique_ptr<clang::ASTConsumer>
-        FrontendAction::CreateASTConsumer(clang::CompilerInstance& compiler,
-                                          llvm::StringRef input_file) {
+        FrontendAction::CreateASTConsumer(
+                clang::CompilerInstance& compiler,
+                [[maybe_unused]] llvm::StringRef input_file) {
 
     // Ignore all errors/warnings
     compiler.getDiagnostics().setSuppressAllDiagnostics(true);
