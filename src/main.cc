@@ -12,7 +12,6 @@ inline bool IsStartUpValid(int argc) { return argc == 2; }
 //      6) Add more working types for fuzzer generation
 //      7) Comment
 
-// /home/chinesegranny/CLionProjects/AutoFuzz/test/llvm_pass/test_main.c
 int main(int argc, char** argv) {
     if (!IsStartUpValid(argc)) {
         fprintf(stderr, "Usage: %s <.c>\n", argv[0]);

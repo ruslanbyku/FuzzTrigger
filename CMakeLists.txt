@@ -71,13 +71,12 @@ set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 # Disable C++ native RTTI and EH (use RTTI with llvm instead)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti") # -fno-exceptions
 
-
-add_executable(AutoFuzz ${SOURCES})
+add_executable(autofuzz ${SOURCES})
 
 #
 # Link LLVM
 #
-target_link_libraries(AutoFuzz LLVM ${clang_lib})
+target_link_libraries(autofuzz LLVM ${clang_lib})
 
 #
 # Debug messages
