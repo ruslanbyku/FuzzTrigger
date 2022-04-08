@@ -8,6 +8,6 @@ make
 unset LLVM_COMPILER
 cd ..
 # Extract
-extract-bc --manifest --bitcode curl-7.81.0/lib/.libs/libcurl.a
-llvm-dis curl-7.81.0/lib/.libs/libcurl.a.bc -o libcurl.ll
-mv curl-7.81.0/lib/.libs/libcurl.a.llvm.manifest MANIFEST.txt
+extract-bc --manifest --bitcode curl-7.81.0/lib/.libs/libcurl.so
+llvm-dis curl-7.81.0/lib/.libs/libcurl.so.bc -o libcurl.ll
+mv curl-7.81.0/lib/.libs/libcurl.so.llvm.manifest MANIFEST.txt

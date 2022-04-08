@@ -1,0 +1,13 @@
+#!/bin/bash
+
+PROJECT=/home/chinesegranny/CLionProjects/AutoFuzz/test/fuzzing/libcurl/curl-7.81.0
+EXECUTABLE=/home/chinesegranny/CLionProjects/AutoFuzz/test/fuzzing/libcurl/curl-7.81.0/lib/.libs/libcurl.so
+
+# Compile to libcurl.so
+./compile -A --args=--with-openssl $PROJECT
+# Convert libcurl.so to libcurl.ll and generate MANIFEST.txt
+./link $EXECUTABLE
+# Find all source files from MANIFEST.txt
+./interpret -M MANIFEST.txt $PROJECT
+
+rm MANIFEST.txt
