@@ -1,0 +1,95 @@
+#!/bin/python
+# Avoid errors in tensorflow
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+import sys
+from numpy import loadtxt
+from keras.models import Sequential
+from keras.layers import Dense
+
+VERBOSE           = 0
+DEFAULT           = 1
+DATASET_DIRECTORY = "/home/chinesegranny/CLionProjects/AutoFuzz/src/ml/"
+DATASET_PATH      = DATASET_DIRECTORY + "fuzzer_parameters_dataset.csv"
+DATASET_DELIMITER = ','
+ACCURACY          = 3
+ROWS              = 100
+COLUMNS           = 3
+THRESHOLD         = 40 / 100  # 40%
+
+
+def is_worth(function_arguments) -> int:
+    if len(function_arguments) > COLUMNS:
+        return DEFAULT
+
+    # Load the prepared dataset
+    dataset = loadtxt(DATASET_PATH, delimiter=DATASET_DELIMITER)
+
+    # X - [0, COLUMNS]
+    # y - [COLUMNS]
+    X = dataset[:, 0:COLUMNS]
+    y = dataset[:, COLUMNS]
+
+    # Initialize a keras model
+    model = Sequential()
+    model.add(Dense(12, input_dim=COLUMNS, activation="relu"))
+    model.add(Dense(8, activation="relu"))
+    model.add(Dense(1, activation="sigmoid"))
+
+    # Compile the keras model
+    model.compile(loss="binary_crossentropy",
+                  optimizer="adam", metrics=["accuracy"])
+
+    # Fit the keras model on the dataset
+    model.fit(X, y, epochs=150, batch_size=10, verbose=VERBOSE)
+
+    # Make predictions
+    predictions = model.predict(X)
+
+    # Get prediction for the function arguments
+    function_arguments.sort()
+    for row in range(ROWS):
+        arguments = sorted(list(map(int, X[row].tolist())))
+        if function_arguments == arguments:
+            return predictions[row][0]
+
+    return DEFAULT
+
+
+def sanitize_and_prepare(function_arguments) -> list:
+    if not all([item.isdigit() for item in function_arguments]):
+        return []
+
+    function_arguments        = list(map(int, list(function_arguments)))
+    function_arguments_number = len(function_arguments)
+
+    if function_arguments_number < COLUMNS:
+        return function_arguments  + [0] * (COLUMNS - function_arguments_number)
+
+    return function_arguments
+
+
+def main():
+    if len(sys.argv) != 2:
+        print(DEFAULT)
+        sys.exit(1)
+
+    if not os.path.exists(DATASET_PATH):
+        print(DEFAULT)
+        sys.exit(1)
+
+    function_arguments = sanitize_and_prepare(sys.argv[1])
+    if not function_arguments:
+        print(DEFAULT)
+        sys.exit(1)
+
+    results = []
+    for _ in range(ACCURACY):
+        results.append(is_worth(function_arguments))
+
+    print(1 if sum(results) / len(results) > THRESHOLD else 0, end='')
+
+
+if __name__ == "__main__":
+    main()

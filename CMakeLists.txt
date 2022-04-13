@@ -32,6 +32,7 @@ include_directories(
         src/llvm/generator/
         src/system/
         src/log/
+        src/ml/
 )
 set(SOURCES
         src/main.cc
@@ -62,6 +63,8 @@ set(SOURCES
         src/log/logger.h
         src/llvm/generator/frontend_action.h
         src/llvm/generator/frontend_action.cc
+        src/ml/ml_oracle.cc
+        src/ml/ml_oracle.h
         )
 
 #

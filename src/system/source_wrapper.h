@@ -10,6 +10,7 @@
 #include "virtual_mapper.h"
 #include "file.h"
 #include "logger.h"
+#include "ml_oracle.h"
 
 #include <exception>
 

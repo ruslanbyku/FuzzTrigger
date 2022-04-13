@@ -285,6 +285,34 @@ bool SourceWrapper::PerformGeneration(
     }
 
     // --------------------------------------------------------------------- //
+    // A Machine Learning module to calculate a probability that the         //
+    // function is vulnerable                                                //
+    // --------------------------------------------------------------------- //
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Calculating a probability for "
+                            << function_dump->name_
+                            << " to be vulnerable.";
+    }
+
+    MLOracle oracle(function_dump->arguments_);
+    if (!oracle.GetVerdict()) {
+        if (LOGGER_ON) {
+            LOG(LOG_LEVEL_INFO) << "Function "
+                                << function_dump->name_
+                                << " has a low probability to be vulnerable. "
+                                   "Abort.";
+        }
+
+        return true;
+    }
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Function "
+                            << function_dump->name_
+                            << " might be vulnerable.";
+    }
+
+    // --------------------------------------------------------------------- //
     //        Create a directory to store data about the function            //
     // --------------------------------------------------------------------- //
     //
