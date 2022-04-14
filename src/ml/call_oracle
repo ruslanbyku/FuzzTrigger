@@ -1,7 +1,28 @@
 #!/bin/python
-# Avoid errors in tensorflow
+# Avoid output from tensorflow
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+#
+# Description of the dataset
+#
+# 1. Name: fuzzer_parameters_dataset.csv
+# 2. Number of instances: 100
+# 3. Number of attributes: 3
+# 4. Attribute description:
+# enum {
+#     PARAM_ABSENT = 0  // no parameter
+#     PARAM_STRING = 1, // void*, char*
+#     PARAM_DIGIT  = 2, // (int, float, double, bool) + pointers, char
+#     PARAM_STRUCT = 3  // object + pointers
+# }
+# 5. Attributes in a row are supposed to be in ascending order.
+#    For instances: 312 and 321 in terms of function arguments are the same,
+#                   but in statistics they are not. So 312 and 321 will be 123.
+# 6. Class distribution:
+# 0 - no vulnerability during fuzzing
+# 1 - a vulnerability during fuzzing
+#
 
 import sys
 from numpy import loadtxt
