@@ -1,34 +1,42 @@
 #include "source_wrapper.h"
+#include "project_wrapper.h"
 #include "logger.h"
+#include "options.h"
 
-#include <cstdio>
-
-inline bool IsStartUpValid(int argc) { return argc == 2; }
+#include "cstdio"
 
 //TODO: 1) Add support for relative paths
 //      2) Add more log entries
-//      3) Add support for projects' analysis (libraries included)
-//      5) Add a parser of cmd arguments OR add a config to start the app
-//      6) Add more working types for fuzzer generation
-//      7) Comment
+//      3) !!! Comment
+//      4) !!! Add support for projects' analysis (libraries included)
+//      5) !!! Add more working types for fuzzer generation
 
 int main(int argc, char** argv) {
-    if (!IsStartUpValid(argc)) {
-        fprintf(stderr, "Usage: %s <.c>\n", argv[0]);
-
-        return EXIT_FAILURE;
-    }
+    llvm::cl::HideUnrelatedOptions(fuzzer_options);
+    llvm::cl::ParseCommandLineOptions(argc, argv);
 
     StartLogging();
 
-    bool result = false;
+    std::string target = input_file.c_str();
+    bool result        = false;
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Begin working with " << target << ".";
+    }
+
     try {
-        if (LOGGER_ON) {
-            LOG(LOG_LEVEL_INFO) << "Begin working with " << argv[1] << ".";
+        std::unique_ptr<Wrapper> wrapper;
+
+        // Initialize a fuzzer state
+        if (sources.empty()) {
+            wrapper = std::make_unique<SourceWrapper>(target);
+        } else {
+            wrapper = std::make_unique<ProjectWrapper>(target, sources.c_str());
         }
 
-        SourceWrapper wrapper(argv[1]);
-        result = wrapper.LaunchRoutine();
+        // Run the fuzzer main routine
+        result = wrapper->LaunchRoutine();
+
     } catch (const std::runtime_error& exception) {
         if (LOGGER_ON) {
             LOG(LOG_LEVEL_ERROR) << exception.what();
@@ -38,8 +46,12 @@ int main(int argc, char** argv) {
     FinishLogging();
 
     if (!result) {
+        fprintf(stdout, "Failure.\n");
+
         return EXIT_FAILURE;
     }
+
+    fprintf(stdout, "Success.\n");
 
     return EXIT_SUCCESS;
 }

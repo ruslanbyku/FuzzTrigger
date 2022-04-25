@@ -6,7 +6,8 @@ SourceWrapper::SourceWrapper(std::string source_file_path, bool auto_deletion,
   ir_source_file_(source_file_),
   working_directory_(source_file_.GetParentPath()),
   module_dump_(std::make_unique<Module>()),
-  auto_deletion_(auto_deletion), random_on_(random_on),
+  auto_deletion_(auto_deletion),
+  random_on_(random_on),
   override_(override) {
     InitializeState();
 }
@@ -39,8 +40,10 @@ void SourceWrapper::InitializeState() {
 
     if (LOGGER_ON) {
         LOG(LOG_LEVEL_INFO) << "File " << source_file_.GetPath() << " found.";
+        //
         LOG(LOG_LEVEL_INFO) << "Current working directory "
                             << working_directory_ << ".";
+        //
         LOG(LOG_LEVEL_INFO) << "Check whether " << source_file_.GetPath()
                             << " can be compiled.";
     }
@@ -63,6 +66,7 @@ void SourceWrapper::InitializeState() {
 
     // The source file is valid
     // Create a corresponding IR file for the source file
+    // file_name[.c] -> file_name[.ll]
     ir_source_file_.ReplaceExtension(ir_extension);
 
     if (LOGGER_ON) {
@@ -85,6 +89,8 @@ void SourceWrapper::InitializeState() {
 }
 
 bool SourceWrapper::LaunchRoutine() {
+    return true;
+
     // --------------------------------------------------------------------- //
     //                        Compiling source to IR                         //
     // --------------------------------------------------------------------- //
@@ -499,7 +505,7 @@ bool SourceWrapper::PerformGeneration(
 }
 
 void SourceWrapper::ConstructResultDirectoryPath() {
-    result_directory_path_ += source_file_.GetParentPath();
+    result_directory_path_ += source_file_.GetParentPath(); //TODO: May be working_directory_?
     result_directory_path_ += "/";
     result_directory_path_ += source_file_.GetStem();
     result_directory_path_ += "_fuzz_results";

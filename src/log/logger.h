@@ -177,8 +177,13 @@ inline void StartLogging() {
 }
 
 inline void EndLogger() {
-    if (FileHandler::GetStream()) {
-        fclose(FileHandler::GetStream());
+    FILE* file_stream = FileHandler::GetStream();
+
+    if (file_stream) {
+        // Do not close stdout
+        if (file_stream != stdout) {
+            fclose(FileHandler::GetStream());
+        }
     }
 }
 

@@ -1,13 +1,24 @@
 #!/bin/bash
 
+#
+# Targets to process
+#
 PROJECT=/home/chinesegranny/CLionProjects/AutoFuzz/test/fuzzing/libcurl/curl-7.81.0
 EXECUTABLE=/home/chinesegranny/CLionProjects/AutoFuzz/test/fuzzing/libcurl/curl-7.81.0/lib/.libs/libcurl.so
+MANIFEST=MANIFEST.txt
+
+#
+# Paths to scripts
+#
+compile=/home/chinesegranny/CLionProjects/AutoFuzz/scripts/compilation/compile
+link=/home/chinesegranny/CLionProjects/AutoFuzz/scripts/compilation/link
+interpret=/home/chinesegranny/CLionProjects/AutoFuzz/scripts/compilation/interpret
 
 # Compile to libcurl.so
-./compile -A --args=--with-openssl $PROJECT
+$compile -A --args=--with-openssl $PROJECT
 # Convert libcurl.so to libcurl.ll and generate MANIFEST.txt
-./link $EXECUTABLE
+$link $EXECUTABLE
 # Find all source files from MANIFEST.txt
-./interpret -M MANIFEST.txt $PROJECT
+$interpret -M $MANIFEST $PROJECT
 
-rm MANIFEST.txt
+rm $MANIFEST

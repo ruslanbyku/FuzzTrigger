@@ -32,6 +32,7 @@ include_directories(
         src/llvm/generator/
         src/system/
         src/log/
+        src/wrapper/
 )
 set(SOURCES
         src/main.cc
@@ -57,12 +58,15 @@ set(SOURCES
         src/system/compiler.h
         src/utils.cc
         src/utils.h
-        src/system/source_wrapper.cc
-        src/system/source_wrapper.h
         src/log/logger.h
         src/llvm/generator/frontend_action.h
         src/llvm/generator/frontend_action.cc
-        )
+        src/wrapper/wrapper.h
+        src/wrapper/project_wrapper.cc
+        src/wrapper/project_wrapper.h
+        src/wrapper/source_wrapper.cc
+        src/wrapper/source_wrapper.h
+        src/options.h)
 
 #
 # Compilation flags
