@@ -10,6 +10,7 @@
 #include <llvm/Pass.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Instructions.h>
+#include <llvm/IR/InstIterator.h>
 #include <llvm/IR/TypeFinder.h>
 #include <llvm/IR/DataLayout.h>
 #include <llvm/Analysis/CallGraph.h>
@@ -43,8 +44,10 @@ private:
 
     std::set<std::string>             visited_structs_;
 
-    FunctionCFGPtr                    functions_cfg_;
-    std::vector<BasicBlockCFGPtr>     bblocks_cfg_;
+    // CFG of all functions in the module
+    std::vector<FunctionCFGPtr>       module_cfg_;
+    // CFG of all basic blocks for each function (in the module)
+    std::vector<BasicBlockCFGPtr>     function_cfg_;
 
     std::set<const llvm::Function*>   standalone_functions_;
 
@@ -64,7 +67,7 @@ private:
     FunctionLinkage GetFunctionLinkage(llvm::GlobalValue::LinkageTypes) const;
 
     // CFG related stuff
-    const llvm::Function* GetRootFunction(llvm::Module&) const;
+    std::vector<const llvm::Function*> GetRootFunctions(llvm::Module&) const;
     uint32_t MakeControlFlowGraph(const llvm::Function&,
                                   const llvm::Function* = nullptr,
                                   uint32_t = 0);

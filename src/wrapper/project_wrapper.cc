@@ -157,10 +157,60 @@ void ProjectWrapper::InitializeState() {
 }
 
 bool ProjectWrapper::LaunchRoutine() {
+    // --------------------------------------------------------------------- //
+    //                           Start analysis                              //
+    // --------------------------------------------------------------------- //
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Start analysis of " << ir_project_.GetPath()
+                            << ".";
+    }
+
+    // Make analysis
+    bool analysis_result = PerformAnalysis();
+    if (!analysis_result) {
+        // Analysis resulted unsuccessful
+        return false;
+    }
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Analysis went successful.";
+    }
+
+    // --------------------------------------------------------------------- //
+    //               Find number of found standalone functions               //
+    // --------------------------------------------------------------------- //
+    if (module_dump_->standalone_funcs_number_ == 0) {
+        if (LOGGER_ON) {
+            LOG(LOG_LEVEL_INFO) << "There are no standalone functions. Abort.";
+        }
+
+        return true;
+    } else {
+        if (LOGGER_ON) {
+            if (module_dump_->standalone_funcs_number_ == 1) {
+                LOG(LOG_LEVEL_INFO) << "There is 1 standalone function.";
+            } else {
+                LOG(LOG_LEVEL_INFO) << "There are "
+                                    << module_dump_->standalone_funcs_number_
+                                    << " standalone functions.";
+            }
+        }
+    }
+
     return true;
 }
 
 bool ProjectWrapper::PerformAnalysis() {
+    PassLauncher pass_on_source(ir_project_.GetPath());
+
+    if (!pass_on_source.LaunchAnalysis(module_dump_)) {
+        return false;
+    }
+
+    if (!*module_dump_) {
+        return false;
+    }
+
     return true;
 }
 

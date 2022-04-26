@@ -89,8 +89,6 @@ void SourceWrapper::InitializeState() {
 }
 
 bool SourceWrapper::LaunchRoutine() {
-    return true;
-
     // --------------------------------------------------------------------- //
     //                        Compiling source to IR                         //
     // --------------------------------------------------------------------- //

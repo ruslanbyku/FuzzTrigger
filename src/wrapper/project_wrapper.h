@@ -1,6 +1,7 @@
 #ifndef AUTOFUZZ_PROJECT_WRAPPER_H
 #define AUTOFUZZ_PROJECT_WRAPPER_H
 
+#include "pass_launcher.h"
 #include "compiler.h"
 #include "module.h"
 #include "file.h"

@@ -8,6 +8,7 @@
 #include <llvm/IR/Function.h>
 #include <llvm/IR/CFG.h>
 
+//
 struct IVertex {
     virtual ~IVertex() = default;
 
@@ -18,9 +19,11 @@ template <typename T>
 struct Vertex : IVertex {
     ~Vertex() override = default;
 
-    const T* object_ = nullptr;
+    const T* object_   = nullptr;
 };
+//
 
+//
 using VertexPtr  = std::shared_ptr<IVertex>;
 using LinkedList = std::vector<VertexPtr>;
 struct VertexComparator {
@@ -29,6 +32,7 @@ struct VertexComparator {
     }
 };
 using AdjacencyList = std::map<VertexPtr, LinkedList, VertexComparator>;
+//
 
 template <typename T>
 class CFG {
@@ -66,6 +70,26 @@ public:
         }
 
         adjacency_list_[U].push_back(V);
+    }
+
+    bool EdgeExists(const T* from, const T* to) const {
+        VertexPtr U = GetVertexByObject(from);
+        if (U == nullptr) {
+            return false;
+        }
+
+        VertexPtr V = GetVertexByObject(to);
+        if (V == nullptr) {
+            return false;
+        }
+
+        for (const VertexPtr& vertex: adjacency_list_.at(U)) {
+            if (vertex == V) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     VertexPtr GetVertexByObject(const T* object) const {

@@ -85,8 +85,8 @@ void Sanitizer::FindFunctionsToDelete(llvm::Module& module,
         if (function.isDeclaration()) {
 
             for (const llvm::User* user: function.users()) {
-                if (const llvm::Instruction* instruction =
-                        llvm::dyn_cast<llvm::Instruction>(user)) {
+                if (const auto* instruction =
+                                      llvm::dyn_cast<llvm::Instruction>(user)) {
                     // Get the function which the instruction belongs to
                     const llvm::Function* parent_function =
                             instruction->getFunction();
@@ -131,13 +131,13 @@ bool Sanitizer::IsNative(const llvm::GlobalVariable& global) {
     for (const llvm::User* global_user: global.users()) {
         // Global variable is NOT a string literal
         if (const auto* instruction =
-                llvm::dyn_cast<llvm::Instruction>(global_user)) {
+                               llvm::dyn_cast<llvm::Instruction>(global_user)) {
             return IsFunctionMember(*instruction);
         }
 
         // Global variable is a string literal
         if (const auto* constant_expression =
-                llvm::dyn_cast<llvm::ConstantExpr>(global_user)) {
+                              llvm::dyn_cast<llvm::ConstantExpr>(global_user)) {
             return DigIntoConstant(constant_expression);
         }
     }
@@ -150,19 +150,19 @@ bool Sanitizer::IsNative(const llvm::GlobalVariable& global) {
 bool Sanitizer::DigIntoConstant(const llvm::ConstantExpr* constant_expression) {
     for (const auto* constant_expression_user: constant_expression->users()) {
         if (const auto* instruction =
-                llvm::dyn_cast<llvm::Instruction>(constant_expression_user)) {
+                  llvm::dyn_cast<llvm::Instruction>(constant_expression_user)) {
             //
             return IsFunctionMember(*instruction);
-            //
+        //
         } else if (auto* constant_body =
-                llvm::dyn_cast<llvm::Constant>(constant_expression_user)) {
+                     llvm::dyn_cast<llvm::Constant>(constant_expression_user)) {
             for (const llvm::User* constant_value: constant_body->users()) {
+                //
                 if (auto* global =
-                        llvm::dyn_cast<llvm::GlobalVariable>(constant_value)) {
+                         llvm::dyn_cast<llvm::GlobalVariable>(constant_value)) {
                     // @__const.BufferOverRead.items
                     //
                     return IsNative(*global);
-                    //
                 }
             }
         }

@@ -53,7 +53,8 @@ void Analysis::DumpModule(llvm::Module& module) {
     // --------------------------------------------------------------------- //
     //                          Dump module structs                          //
     // --------------------------------------------------------------------- //
-    DumpModuleStructs(module);
+    // TURN OFF STRUCT DUMP FOR NOW
+    //DumpModuleStructs(module);
 
     // --------------------------------------------------------------------- //
     //                          Dump module globals                          //
@@ -71,11 +72,14 @@ void Analysis::DumpModule(llvm::Module& module) {
         return;
     }
 
+    module_dump_->success_ = true;
+    return;
+
     // --------------------------------------------------------------------- //
     //                         Dump module functions                         //
     // --------------------------------------------------------------------- //
     // Dump local functions
-    result = DumpModuleFunctions(module, functions_cfg_);
+    //result = DumpModuleFunctions(module, module_cfg_);
     if (!result) {
         // There are no standalone functions, abort
         module_dump_->success_ = result;
@@ -89,9 +93,12 @@ void Analysis::DumpModule(llvm::Module& module) {
 
 bool Analysis::IsModuleLegit(const std::string& source_name,
                                              uint64_t functions_number) const {
-    // Check if the source file were passed
+    // Check if the IR module has a header, specifically the
+    // 'source_filename' field
     if (source_name.empty()) {
-        // Can not identify the corresponding source file
+        // Can not identify the corresponding 'source_filename'
+        //
+        // Actually, do not know if it is right to rely upon this field
         return false;
     }
 
@@ -106,15 +113,20 @@ bool Analysis::IsModuleLegit(const std::string& source_name,
 
 bool Analysis::TraverseModule(llvm::Module& module) {
     // A root function calls every function in the module, it is an entry
-    // point to the program
-    const llvm::Function* root_function = GetRootFunction(module);
-    if (!root_function) {
+    // point to the program. There might be many root functions in the module.
+    std::vector<const llvm::Function*>
+            root_functions = GetRootFunctions(module);
+
+    if (root_functions.empty()) {
         // No root function, do not know how to traverse the module, quit
         return false;
     }
 
-    MakeControlFlowGraph(*root_function);
-    //PrintCFG();
+    for (const auto* root_function: root_functions) {
+        MakeControlFlowGraph(*root_function, nullptr, 0);
+    }
+
+    PrintCFG();
 
     return true;
 }
@@ -514,24 +526,119 @@ std::unique_ptr<Type> Analysis::ResolveStructType(llvm::Type* data_type,
 //
 // Root function is a function that calls every other function in the module
 //
-const llvm::Function* Analysis::GetRootFunction(llvm::Module& module) const {
-    llvm::CallGraph call_graph(module);
+std::vector<const llvm::Function*> Analysis::GetRootFunctions(
+                                                   llvm::Module& module) const {
+    const llvm::CallGraph call_graph(module);
+    std::vector<const llvm::Function*>    root_functions;
+    std::map<const llvm::Function*, bool> cross_references_to;
+    std::set<const llvm::Function*>       function_pointers;
 
-    // Enumerate all functions in the module
-    for (auto& ii: call_graph) {
-        llvm::CallGraphNode* call_graph_node = ii.second.get();
-        // Find out the number of times the function was encountered in the
-        // module
-        if (call_graph_node->getNumReferences() == 1) {
-            const llvm::Function* function = ii.first;
-            // Find out if the function has a definition
-            if (!function->isDeclaration()) {
-                return function;
+    // Get additional support information about how functions in the module
+    // are called
+    // Enumerate all functions in the module (the first lap) and find all
+    // cross-references to a function and function pointers
+    for (const llvm::Function& function: module) {
+
+        if (!cross_references_to.contains(&function)) {
+            // If nobody has called this function yet, mark it as a root for now
+            cross_references_to[&function] = false;
+        }
+
+        for (const auto& instruction: llvm::instructions(function)) {
+            // Find call instructions for cross-references
+            if (auto caller = llvm::dyn_cast<llvm::CallInst>(&instruction)) {
+                // A call instruction is found, take the callee
+                const llvm::Function* callee = caller->getCalledFunction();
+
+                if (callee) {  // There is a valid callee in the caller
+                    // The current function calls another function (callee)
+                    // Mark the callee that it can be already a root
+                    cross_references_to[callee] = true;
+                }
+
+            // Find store instruction for function pointers
+            } else if (auto store_instruction =
+                    llvm::dyn_cast<llvm::StoreInst>(&instruction)) {
+                // A store instruction is found, take the first operand
+                const llvm::Value* operand = store_instruction->getOperand(0);
+                const llvm::Type* type     = operand->getType();
+
+                if (!type->isPointerTy() ||
+                                    !llvm::isa<llvm::PointerType>(type)) {
+                    // The operand is not a pointer
+                    continue;
+                }
+
+                const auto* pointer = llvm::cast<llvm::PointerType>(type);
+                if (!pointer->getElementType()->isFunctionTy() ||
+                                          !llvm::isa<llvm::Function>(operand)) {
+                    // A pointer is not a function pointer
+                    continue;
+                }
+
+                // A function pointer has been found
+                if (!operand->getName().empty()) {
+                    // The value of the pointer is known at compile time
+                    const auto* callee = llvm::cast<llvm::Function>(operand);
+
+                    if (callee) {
+                        function_pointers.insert(callee);
+                    }
+                }
             }
         }
     }
 
-    return nullptr;
+    // Enumerate all functions in the module (the second lap)
+    // pair - (llvm::Function*, llvm::CallGraphNode*)
+    for (const auto& pair: call_graph) {
+
+        // The first pair is null (nullptr, 0).
+        if (!pair.first) {
+            continue;
+        }
+
+        const llvm::CallGraphNode* call_graph_node = pair.second.get();
+        // Get the number of times the function was encountered in the module
+        uint32_t references_to_function = call_graph_node->getNumReferences();
+
+        if (references_to_function == 1) {
+            // Looks like one root is found, checking it further
+            const llvm::Function* function = pair.first;
+
+            // -------------------------------------------------------------- //
+            //                           Filter                               //
+            // -------------------------------------------------------------- //
+
+            // Find out if the function has a definition
+            if (function->isDeclaration()) {
+                // The function does not have a definition (body)
+                continue;
+            }
+
+            // static functions (internal linkage functions) might be falsely
+            // recognized as root functions
+            if (!function->hasExternalLinkage()) {
+                continue;
+            }
+
+            // Employ the additional check
+            // Find if the function was previously marked as a non-root
+            if (cross_references_to[function]) {
+                // The function was indeed marked as a non-root
+                continue;
+            }
+
+            if (function_pointers.contains(function)) {
+                // The function is used as a function pointer
+                continue;
+            }
+
+            root_functions.push_back(function);
+        }
+    }
+
+    return root_functions;
 }
 
 //
@@ -558,28 +665,44 @@ uint32_t Analysis::MakeControlFlowGraph(const llvm::Function& function,
     // --------------------------------------------------------------------- //
     //                             Function CFG                              //
     // --------------------------------------------------------------------- //
-    // Create a new CFG object if it is empty
-    if (!functions_cfg_) {
-        functions_cfg_ = std::make_unique<FunctionCFG>();
+    // If the current function is root (the first enter)
+    if (!parent) {
+        // Create a new adjacency list for a bunch of functions
+        module_cfg_.emplace_back(std::make_unique<FunctionCFG>());
     }
 
-    auto module_cfg = static_cast<FunctionCFG*>(functions_cfg_.get());
+    // Extract the most recent created adjacency list
+    auto functions_cfg = static_cast<FunctionCFG*>(module_cfg_.back().get());
 
-    // Recursion prevention
-    // If the function calls itself or if a vertex for a called function
-    // already exists
-    if (&function == parent || module_cfg->GetVertexByObject(&function)) {
-        module_cfg->AddEdge(parent, &function);
+    // Recursion prevention:
+    // 1) if the function calls itself (a -> a)
+    // 2) if a vertex for a called function already exists (a -> b -> a)
+    if (&function == parent || functions_cfg->GetVertexByObject(&function)) {
+
+        // If an edge exists, then the current function is called more than
+        // once within some function, do not register the same edge
+        if (!functions_cfg->EdgeExists(parent, &function)) {
+            // The edge does not exist, but the current function already exists
+            // It is definitely a recursion
+            // Add the edge to the adjacency list
+            functions_cfg->AddEdge(parent, &function);
+        }
 
         return function_id;
     }
 
-    module_cfg->AddVertex(function_id, &function);
+    // Create a new vertex for a function and add it to the adjacency list
+    functions_cfg->AddVertex(function_id, &function);
+    // Keep track of each function identification number
     ++function_id;
 
-    // Skip root function
+    // If the current function is not root (the second or more enters)
     if (parent) {
-        module_cfg->AddEdge(parent, &function);
+        // Form a new edge (u, v), where:
+        // u - a parent function
+        // v - the current function
+        // Then add the edge to the adjacency list
+        functions_cfg->AddEdge(parent, &function);
     }
 
     // --------------------------------------------------------------------- //
@@ -590,18 +713,21 @@ uint32_t Analysis::MakeControlFlowGraph(const llvm::Function& function,
     std::map<const llvm::BasicBlock*, bool> visited;
     uint32_t                                block_id = 0;
 
-    // Create a new CFG object for functions' basic blocks
-    bblocks_cfg_.emplace_back(std::make_unique<BasicBlockCFG>(function));
-    auto function_cfg =
-            static_cast<BasicBlockCFG*>(bblocks_cfg_.back().get());
+    // Create a new adjacency list for a bunch of basic blocks of the function
+    function_cfg_.emplace_back(std::make_unique<BasicBlockCFG>(function));
 
-    // Create/initialize all vertices for the adjacency list
+    // Extract the most recent created adjacency list
+    auto bblocks_cfg =
+            static_cast<BasicBlockCFG*>(function_cfg_.back().get());
+
+    // Create all vertices for the adjacency list beforehand
+    // Add just created vertices to the adjacency list
     for (auto& basic_block: function.getBasicBlockList()) {
-        function_cfg->AddVertex(block_id, &basic_block);
+        bblocks_cfg->AddVertex(block_id, &basic_block);
         ++block_id;
     }
 
-    // Add the entry block to the queue
+    // Add the entry block to the queue (start from the first basic block)
     bb_queue.push(entry_block);
     visited[entry_block] = true;
 
@@ -635,7 +761,7 @@ uint32_t Analysis::MakeControlFlowGraph(const llvm::Function& function,
             const llvm::BasicBlock* successor = terminator->getSuccessor(idx);
 
             // A neighboring vertex is found, it can form an edge
-            function_cfg->AddEdge(block, successor);
+            bblocks_cfg->AddEdge(block, successor);
 
             // If all neighbors of the vertex has been previously found, then
             // do not process it again
@@ -655,26 +781,41 @@ uint32_t Analysis::MakeControlFlowGraph(const llvm::Function& function,
 
 void Analysis::PrintCFG() const {
     llvm::outs() << "CFG of module functions\n";
-    const AdjacencyList& func_adjacency_list_ =
-                                             functions_cfg_->GetAdjacencyList();
+    for (auto& functions_cfg: module_cfg_) {
+        const AdjacencyList& func_adjacency_list_ =
+                                             functions_cfg->GetAdjacencyList();
 
-    for (const auto& pair: func_adjacency_list_) {
-        auto vertex = static_cast<Vertex<llvm::Function>*>(pair.first.get());
-        llvm::outs() << vertex->object_->getName() <<
-                                                    "(" << vertex->id_ << ")\n";
-        for (auto& node: pair.second) {
-            auto node_data = static_cast<Vertex<llvm::Function>*>(node.get());
-            llvm::outs() << "\t";
-            llvm::outs() << node_data->object_->getName();
-            llvm::outs() << "(" << node_data->id_ << ")\n";
+        for (const auto& pair: func_adjacency_list_) {
+            auto vertex =
+                    static_cast<Vertex<llvm::Function>*>(pair.first.get());
+            if (vertex->id_ == 0) {
+                llvm::outs() << "[" << vertex->object_->getName() << "]\n";
+            }
+            llvm::outs() << vertex->object_->getName()
+                         << "(" << vertex->id_ << ") -> ";
+
+            if (pair.second.empty()) {
+                llvm::outs() << "None\n";
+                continue;
+            }
+
+            for (auto& node: pair.second) {
+                auto node_data =
+                        static_cast<Vertex<llvm::Function>*>(node.get());
+                llvm::outs() << node_data->object_->getName()
+                                     << "(" << node_data->id_ << ") ";
+            }
+            llvm::outs() << "\n";
         }
+
+        llvm::outs() << "===\n";
     }
-    llvm::outs() << "===\n";
 
     llvm::outs() << "Going inside each function..\n";
-    for (auto& cfg: bblocks_cfg_) {
-        const AdjacencyList& bb_adjacency_list_ = cfg->GetAdjacencyList();
-        auto bb_cfg = static_cast<BasicBlockCFG*>(cfg.get());
+    for (auto& bblocks_cfg: function_cfg_) {
+        const AdjacencyList& bb_adjacency_list_ =
+                                              bblocks_cfg->GetAdjacencyList();
+        auto bb_cfg = static_cast<BasicBlockCFG*>(bblocks_cfg.get());
 
         llvm::outs() << "CFG of a function: ";
         llvm::outs() << bb_cfg->GetFunction().getName() << "\n";
@@ -682,18 +823,25 @@ void Analysis::PrintCFG() const {
             const auto vertex =
                     static_cast<Vertex<llvm::BasicBlock>*>(pair.first.get());
             vertex->object_->printAsOperand(llvm::outs());
-            llvm::outs() << "(" << vertex->id_ << ")\n";
+            llvm::outs() << "(" << vertex->id_ << ") -> ";
+
+            if (pair.second.empty()) {
+                llvm::outs() << "None\n";
+                continue;
+            }
 
             for (const auto& node: pair.second) {
                 auto node_data =
                         static_cast<Vertex<llvm::BasicBlock>*>(node.get());
-                llvm::outs() << "\t";
                 node_data->object_->printAsOperand(llvm::outs());
-                llvm::outs() << "(" << node_data->id_ << ")\n";
+                llvm::outs() << "(" << node_data->id_ << ") ";
             }
+            llvm::outs() << "\n";
         }
+        llvm::outs() << "\n";
     }
 }
+
 
 void Analysis::FindStandaloneFunctions(llvm::Module& module,
                                        const AdjacencyList& adjacency_list) {

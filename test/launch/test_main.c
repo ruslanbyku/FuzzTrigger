@@ -65,6 +65,7 @@ struct A* initialize_struct_through_function(struct_initialization pointer) {
 }
 */
 
+void print_characters(char characters[3]);
 
 int* initialize_array(int number_of_bytes) {
     if (number_of_bytes < 1) {
@@ -73,6 +74,9 @@ int* initialize_array(int number_of_bytes) {
 
     int* array = (int*) malloc(number_of_bytes);
     global_pointer = array;
+
+    char characters[3] = {'x', 'y', 'z'};
+    print_characters(characters);
 
     return array;
 }
@@ -255,6 +259,7 @@ int main(int argc, char** argv) {
     //
     sanitize_cookie_path('\"');
     //
+    sanitize_cookie_path('\"');
 
     return 0;
 }
