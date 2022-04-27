@@ -19,9 +19,9 @@ void ProjectWrapper::InitializeState() {
     if (!ir_project_.IsAbsolute()) {
         std::string exception_message;
 
-        exception_message += "File path of ";
+        exception_message += "File path of '";
         exception_message += ir_project_.GetPath();
-        exception_message += " is relative.";
+        exception_message += "' is relative.";
 
         throw std::runtime_error(exception_message);
     }
@@ -29,9 +29,9 @@ void ProjectWrapper::InitializeState() {
     if (!ir_project_.Exists()) {
         std::string exception_message;
 
-        exception_message += "File ";
+        exception_message += "File '";
         exception_message += ir_project_.GetPath();
-        exception_message += " does not exist.";
+        exception_message += "' does not exist.";
 
         throw std::runtime_error(exception_message);
     }
@@ -39,9 +39,9 @@ void ProjectWrapper::InitializeState() {
     if (!sources_.IsAbsolute()) {
         std::string exception_message;
 
-        exception_message += "File path of ";
+        exception_message += "File path of '";
         exception_message += sources_.GetPath();
-        exception_message += " is relative.";
+        exception_message += "' is relative.";
 
         throw std::runtime_error(exception_message);
     }
@@ -49,46 +49,46 @@ void ProjectWrapper::InitializeState() {
     if (!sources_.Exists()) {
         std::string exception_message;
 
-        exception_message += "File ";
+        exception_message += "File '";
         exception_message += sources_.GetPath();
-        exception_message += " does not exist.";
+        exception_message += "' does not exist.";
 
         throw std::runtime_error(exception_message);
     }
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "File " << ir_project_.GetPath() << " found.";
-        LOG(LOG_LEVEL_INFO) << "File " << sources_.GetPath() << " found.";
+        LOG(LOG_LEVEL_INFO) << "File '" << ir_project_.GetPath() << "' found.";
+        LOG(LOG_LEVEL_INFO) << "File '" << sources_.GetPath() << "' found.";
         //
         //
         //
-        LOG(LOG_LEVEL_INFO) << "Current working directory "
-                            << working_directory_ << ".";
+        LOG(LOG_LEVEL_INFO) << "Current working directory '"
+                            << working_directory_ << "'.";
         //
         //
         //
-        LOG(LOG_LEVEL_INFO) << "Check whether " << ir_project_.GetPath()
-                            << " looks like an IR file.";
+        LOG(LOG_LEVEL_INFO) << "Check whether '" << ir_project_.GetPath()
+                            << "' looks like an IR file.";
     }
 
     if (!Compiler::IsCompilable(ir_project_)) {
         std::string exception_message;
 
-        exception_message += "File ";
+        exception_message += "File '";
         exception_message += ir_project_.GetPath();
-        exception_message += " does look like an IR file.";
+        exception_message += "' does look like an IR file.";
 
         throw std::runtime_error(exception_message);
     }
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "File " << ir_project_.GetPath()
-                            << " looks like an IR file.";
+        LOG(LOG_LEVEL_INFO) << "File '" << ir_project_.GetPath()
+                            << "' looks like an IR file.";
         //
         //
         //
-        LOG(LOG_LEVEL_INFO) << "Extract source paths from "
-                            << sources_.GetPath() << ":";
+        LOG(LOG_LEVEL_INFO) << "Extract source paths from '"
+                            << sources_.GetPath() << "':";
     }
 
     // If a source path is not valid, proceed anyway.
@@ -108,12 +108,12 @@ void ProjectWrapper::InitializeState() {
             source_paths_.insert(single_source_path);
 
             if (LOGGER_ON) {
-                LOG(LOG_LEVEL_INFO) << single_source_path << " found.";
+                LOG(LOG_LEVEL_INFO) << "'" << single_source_path << "' found.";
             }
         } else {
             if (LOGGER_ON) {
-                LOG(LOG_LEVEL_WARNING) << "Can not recognize "
-                                       << single_source_path << ".";
+                LOG(LOG_LEVEL_WARNING) << "Can not recognize '"
+                                       << single_source_path << "'.";
             }
         }
     }
@@ -121,9 +121,9 @@ void ProjectWrapper::InitializeState() {
     if (source_paths_.empty()) {
         std::string exception_message;
 
-        exception_message += "No source paths were found in ";
+        exception_message += "No source paths were found in '";
         exception_message += sources_.GetPath();
-        exception_message += ".";
+        exception_message += "'.";
 
         throw std::runtime_error(exception_message);
     }
@@ -161,8 +161,8 @@ bool ProjectWrapper::LaunchRoutine() {
     //                           Start analysis                              //
     // --------------------------------------------------------------------- //
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Start analysis of " << ir_project_.GetPath()
-                            << ".";
+        LOG(LOG_LEVEL_INFO) << "Start analysis of '" << ir_project_.GetPath()
+                            << "'.";
     }
 
     // Make analysis
@@ -181,21 +181,34 @@ bool ProjectWrapper::LaunchRoutine() {
     // --------------------------------------------------------------------- //
     if (module_dump_->standalone_funcs_number_ == 0) {
         if (LOGGER_ON) {
-            LOG(LOG_LEVEL_INFO) << "There are no standalone functions. Abort.";
+            LOG(LOG_LEVEL_WARNING) << "There are no standalone functions."
+                                      " Abort.";
         }
 
         return true;
     } else {
         if (LOGGER_ON) {
             if (module_dump_->standalone_funcs_number_ == 1) {
-                LOG(LOG_LEVEL_INFO) << "There is 1 standalone function.";
+                LOG(LOG_LEVEL_INFO) << "There is 1 standalone function:";
             } else {
                 LOG(LOG_LEVEL_INFO) << "There are "
                                     << module_dump_->standalone_funcs_number_
-                                    << " standalone functions.";
+                                    << " standalone functions:";
             }
         }
     }
+
+    if (LOGGER_ON) {
+        for (auto& function: module_dump_->functions_) {
+            if (!function->is_standalone_) {
+                continue;
+            }
+
+            LOG(LOG_LEVEL_INFO) << "\t" << function->name_;
+        }
+
+    }
+
 
     return true;
 }

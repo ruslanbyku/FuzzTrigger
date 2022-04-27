@@ -15,6 +15,7 @@ CC_COMPILER      = {"CC": COMPILER_WRAPPER}
 AUTOTOOLS        = "configure"
 CMAKE            = "cmake"
 MAKE             = "make"
+OPTIMIZATION     = "CFLAGS='-O0'"  # https://stackoverflow.com/a/9725326
 
 
 PARSER_DESCRIPTION = "description:\n  PROG changes directory to input_file " \
@@ -104,7 +105,7 @@ def filter_input() -> tuple:
 
 def compile_project(cmd) -> str:
     build_command       = []
-    compile_command     = [MAKE]
+    compile_command     = [MAKE, OPTIMIZATION]
     debug_used_commands = ""
 
     os.chdir(cmd.project_directory)

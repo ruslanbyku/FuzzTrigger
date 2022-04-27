@@ -20,9 +20,9 @@ void SourceWrapper::InitializeState() {
     if (!source_file_.IsAbsolute()) {
         std::string exception_message;
 
-        exception_message += "File path of ";
+        exception_message += "File path of '";
         exception_message += source_file_.GetPath();
-        exception_message += " is relative.";
+        exception_message += "' is relative.";
 
         throw std::runtime_error(exception_message);
     }
@@ -31,37 +31,37 @@ void SourceWrapper::InitializeState() {
     if (!source_file_.Exists()) {
         std::string exception_message;
 
-        exception_message += "File ";
+        exception_message += "File '";
         exception_message += source_file_.GetPath();
-        exception_message += " does not exist.";
+        exception_message += "' does not exist.";
 
         throw std::runtime_error(exception_message);
     }
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "File " << source_file_.GetPath() << " found.";
+        LOG(LOG_LEVEL_INFO) << "File '" << source_file_.GetPath() << "' found.";
         //
-        LOG(LOG_LEVEL_INFO) << "Current working directory "
-                            << working_directory_ << ".";
+        LOG(LOG_LEVEL_INFO) << "Current working directory '"
+                            << working_directory_ << "'.";
         //
-        LOG(LOG_LEVEL_INFO) << "Check whether " << source_file_.GetPath()
-                            << " can be compiled.";
+        LOG(LOG_LEVEL_INFO) << "Check whether '" << source_file_.GetPath()
+                            << "' can be compiled.";
     }
 
     // Check if the file is a source file and can be compiled
     if (!Compiler::IsCompilable(source_file_)) {
         std::string exception_message;
 
-        exception_message += "File ";
+        exception_message += "File '";
         exception_message += source_file_.GetPath();
-        exception_message += " can not be compiled.";
+        exception_message += "' can not be compiled.";
 
         throw std::runtime_error(exception_message);
     }
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "File " << source_file_.GetPath()
-                            << " can be compiled.";
+        LOG(LOG_LEVEL_INFO) << "File '" << source_file_.GetPath()
+                            << "' can be compiled.";
     }
 
     // The source file is valid
@@ -93,23 +93,23 @@ bool SourceWrapper::LaunchRoutine() {
     //                        Compiling source to IR                         //
     // --------------------------------------------------------------------- //
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Compiling " << source_file_.GetPath()
-                            << " to IR.";
+        LOG(LOG_LEVEL_INFO) << "Compiling '" << source_file_.GetPath()
+                            << "' to IR.";
     }
     bool compile_result = Compiler::CompileToIR(source_file_, ir_source_file_);
     if (!compile_result) {
         if (LOGGER_ON) {
-            LOG(LOG_LEVEL_ERROR) << "An error occurred when compiling "
+            LOG(LOG_LEVEL_ERROR) << "An error occurred when compiling '"
                                  << ir_source_file_.GetPath()
-                                 << " to IR.";
+                                 << "' to IR.";
         }
 
         return false;
     }
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "File " << ir_source_file_.GetPath()
-                            << " created.";
+        LOG(LOG_LEVEL_INFO) << "File '" << ir_source_file_.GetPath()
+                            << "' created.";
     }
 
     // Save a file for further deletion
@@ -119,8 +119,8 @@ bool SourceWrapper::LaunchRoutine() {
     //                           Start analysis                              //
     // --------------------------------------------------------------------- //
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Start analysis of " << ir_source_file_.GetPath()
-                            << ".";
+        LOG(LOG_LEVEL_INFO) << "Start analysis of '"
+                            << ir_source_file_.GetPath() << "'.";
     }
 
     // Make analysis
@@ -146,13 +146,24 @@ bool SourceWrapper::LaunchRoutine() {
     } else {
         if (LOGGER_ON) {
             if (module_dump_->standalone_funcs_number_ == 1) {
-                LOG(LOG_LEVEL_INFO) << "There is 1 standalone function.";
+                LOG(LOG_LEVEL_INFO) << "There is 1 standalone function:";
             } else {
                 LOG(LOG_LEVEL_INFO) << "There are "
                                     << module_dump_->standalone_funcs_number_
-                                    << " standalone functions.";
+                                    << " standalone functions:";
             }
         }
+    }
+
+    if (LOGGER_ON) {
+        for (const auto& function: module_dump_->functions_) {
+            if (!function->is_standalone_) {
+                continue;
+            }
+
+            LOG(LOG_LEVEL_INFO) << "\t" << function->name_;
+        }
+
     }
 
     // --------------------------------------------------------------------- //
@@ -165,8 +176,8 @@ bool SourceWrapper::LaunchRoutine() {
     }
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Open source file "
-                            << source_file_.GetPath() << " with fd = "
+        LOG(LOG_LEVEL_INFO) << "Open source file '"
+                            << source_file_.GetPath() << "' with fd = "
                             << source_descriptor << ".";
     }
 
@@ -181,8 +192,8 @@ bool SourceWrapper::LaunchRoutine() {
     }
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Load source file content "
-                            << source_file_.GetPath() << " into memory.";
+        LOG(LOG_LEVEL_INFO) << "Load source file content '"
+                            << source_file_.GetPath() << "' into memory.";
     }
 
     // --------------------------------------------------------------------- //
@@ -197,24 +208,24 @@ bool SourceWrapper::LaunchRoutine() {
     bool directory_create_result = CreateDirectory(result_directory_path_);
     if (!directory_create_result) {
         if (LOGGER_ON) {
-            LOG(LOG_LEVEL_ERROR) << "Directory "
+            LOG(LOG_LEVEL_ERROR) << "Directory '"
                                  << result_directory_path_
-                                 << " was not created.";
+                                 << "' was not created.";
         }
 
         return false;
     }
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Directory " << result_directory_path_
-                            << " created.";
+        LOG(LOG_LEVEL_INFO) << "Directory '" << result_directory_path_
+                            << "' created.";
         LOG(LOG_LEVEL_INFO) << "Start fuzzer generation process.";
     }
 
     // --------------------------------------------------------------------- //
     //                            Start generation                           //
     // --------------------------------------------------------------------- //
-
+    uint64_t successful_fuzzer_counter = 0;
     // Analysis is ready, module_dump has been filled
     for (auto& function: module_dump_->functions_) {
         if (!function->is_standalone_) {
@@ -223,26 +234,31 @@ bool SourceWrapper::LaunchRoutine() {
 
         bool generation_result = PerformGeneration(function);
         if (!generation_result) {
-            if (LOGGER_ON) {
-                LOG(LOG_LEVEL_ERROR)
-                << "Something went wrong when generating fuzzer for "
-                << function->name_ << ". Continue.";
-            }
-
+            // 1) Something bad has happened
+            // 2) No error occurred, just could not continue to
+            // generate a fuzzer
             continue;
         }
+
+        ++successful_fuzzer_counter;
     }
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Fuzzer generation process went successful.";
+        LOG(LOG_LEVEL_INFO) << "End of fuzzer generation process.";
+        if (successful_fuzzer_counter == 1) {
+            LOG(LOG_LEVEL_INFO) << "1 fuzzer generated.";
+        } else {
+            LOG(LOG_LEVEL_INFO) << successful_fuzzer_counter
+                                << " fuzzers generated.";
+        }
     }
 
     // --------------------------------------------------------------------- //
     //         Unload the source from memory and close the file              //
     // --------------------------------------------------------------------- //
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Unload " << source_file_.GetPath()
-                            << " from memory.";
+        LOG(LOG_LEVEL_INFO) << "Unload '" << source_file_.GetPath()
+                            << "' from memory.";
         LOG(LOG_LEVEL_INFO) << "Close fd = " << source_descriptor << ".";
     }
 
@@ -269,8 +285,8 @@ bool SourceWrapper::PerformAnalysis() {
 bool SourceWrapper::PerformGeneration(
                               const std::unique_ptr<Function>& function_dump) {
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Generate fuzzer for "
-                            << function_dump->name_ << "(...).";
+        LOG(LOG_LEVEL_INFO) << "Generate fuzzer for '"
+                            << function_dump->name_ << "'.";
     }
 
     // --------------------------------------------------------------------- //
@@ -280,12 +296,12 @@ bool SourceWrapper::PerformGeneration(
     // making a fuzzer for it
     if (function_dump->arguments_number_ == 0) {
         if (LOGGER_ON) {
-            LOG(LOG_LEVEL_INFO) << "Function "
+            LOG(LOG_LEVEL_INFO) << "Function '"
                                 << function_dump->name_
-                                << " has no input arguments. Abort.";
+                                << "' has no input arguments. Abort.";
         }
 
-        return true;
+        return false;
     }
 
     // --------------------------------------------------------------------- //
@@ -303,8 +319,8 @@ bool SourceWrapper::PerformGeneration(
     }
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Directory " << function_directory_path
-                                            << " created.";
+        LOG(LOG_LEVEL_INFO) << "Directory '" << function_directory_path
+                                            << "' created.";
     }
 
     // --------------------------------------------------------------------- //
@@ -320,7 +336,7 @@ bool SourceWrapper::PerformGeneration(
     }
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "File " << ir_function_path << " created.";
+        LOG(LOG_LEVEL_INFO) << "File '" << ir_function_path << "' created.";
     }
 
     File ir_function_file(ir_function_path);
@@ -331,8 +347,8 @@ bool SourceWrapper::PerformGeneration(
     //                     Sanitize the IR function file                     //
     // --------------------------------------------------------------------- //
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Launch sanitization for "
-                            << ir_function_path << ".";
+        LOG(LOG_LEVEL_INFO) << "Launch sanitization for '"
+                            << ir_function_path << "'.";
     }
 
     PassLauncher pass_on_function_ir(ir_function_path);
@@ -342,17 +358,17 @@ bool SourceWrapper::PerformGeneration(
     }
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "File " << ir_function_path
-                                       << " has been sanitized.";
+        LOG(LOG_LEVEL_INFO) << "File '" << ir_function_path
+                                       << "' has been sanitized.";
     }
 
     // --------------------------------------------------------------------- //
     //            Find function declaration in the source file               //
     // --------------------------------------------------------------------- //
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Find declaration for "
-                            << function_dump->name_ << " in "
-                            << source_file_.GetPath() << ".";
+        LOG(LOG_LEVEL_INFO) << "Find declaration for '"
+                            << function_dump->name_ << "' in '"
+                            << source_file_.GetPath() << "'.";
     }
 
     FunctionLocation function_location(function_dump->name_);
@@ -385,16 +401,16 @@ bool SourceWrapper::PerformGeneration(
     std::string function_declaration(function_location.entity_);
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Declaration for "
-                            << function_dump->name_ << " is found.";
+        LOG(LOG_LEVEL_INFO) << "Declaration for '"
+                            << function_dump->name_ << "' is found.";
     }
 
     // --------------------------------------------------------------------- //
     //                       Generate fuzzer stub code                       //
     // --------------------------------------------------------------------- //
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Generate fuzzer stub data for "
-                            << function_dump->name_ << ".";
+        LOG(LOG_LEVEL_INFO) << "Generate fuzzer stub data for '"
+                            << function_dump->name_ << "'.";
     }
 
     std::string fuzzer_content;
@@ -402,9 +418,16 @@ bool SourceWrapper::PerformGeneration(
     fuzzer_generator.Generate();
     fuzzer_content = fuzzer_generator.GetFuzzer();
 
+    if (fuzzer_content.empty()) {
+        LOG(LOG_LEVEL_WARNING) << "Fuzzer stub data for '"
+                               << function_dump->name_
+                               << "' has not been generated.";
+        return false;
+    }
+
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Fuzzer stub data for " << function_dump->name_
-                            << " has been generated.";
+        LOG(LOG_LEVEL_INFO) << "Fuzzer stub data for '" << function_dump->name_
+                            << "' has been generated.";
     }
 
     // --------------------------------------------------------------------- //
@@ -420,8 +443,8 @@ bool SourceWrapper::PerformGeneration(
     }
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Fuzzer stub file " << fuzzer_stub_path
-                            << " has been created.";
+        LOG(LOG_LEVEL_INFO) << "Fuzzer stub file '" << fuzzer_stub_path
+                            << "' has been created.";
     }
 
     // Put the file into the garbage right away after the creation
@@ -438,7 +461,7 @@ bool SourceWrapper::PerformGeneration(
     ir_fuzzer_stub_file.ReplaceExtension(ir_extension);
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Compiling " << fuzzer_stub_path << " to IR.";
+        LOG(LOG_LEVEL_INFO) << "Compiling '" << fuzzer_stub_path << "' to IR.";
     }
 
     result = Compiler::CompileToIR(fuzzer_stub_file, ir_fuzzer_stub_file);
@@ -447,8 +470,8 @@ bool SourceWrapper::PerformGeneration(
     }
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "File " << ir_fuzzer_stub_file.GetPath()
-                            << " created.";
+        LOG(LOG_LEVEL_INFO) << "File '" << ir_fuzzer_stub_file.GetPath()
+                            << "' created.";
     }
     // Put the file into the garbage right away after the creation
     PlaceIntoGarbage(ir_fuzzer_stub_file);
@@ -457,8 +480,8 @@ bool SourceWrapper::PerformGeneration(
     //          Resolve name mangling in the fuzzer stub IR file             //
     // --------------------------------------------------------------------- //
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Resolve name mangling in "
-                            << ir_fuzzer_stub_file.GetPath() << ".";
+        LOG(LOG_LEVEL_INFO) << "Resolve name mangling in '"
+                            << ir_fuzzer_stub_file.GetPath() << "'.";
     }
 
     // Modify IR fuzzer stub file (make suitable for separate compilation)
@@ -472,7 +495,9 @@ bool SourceWrapper::PerformGeneration(
     //                 Launch separate compilation of 2 IRs                  //
     // --------------------------------------------------------------------- //
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Compiling separately 2 IRs.";
+        LOG(LOG_LEVEL_INFO) << "Compiling separately 2 IRs:";
+        LOG(LOG_LEVEL_INFO) << "\t" << ir_function_file.GetPath();
+        LOG(LOG_LEVEL_INFO) << "\t" << ir_fuzzer_stub_file.GetPath();
     }
 
     // Compile both IR
@@ -493,10 +518,10 @@ bool SourceWrapper::PerformGeneration(
     }
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Executable "
-                            << fuzzer_executable_path << " created.";
-        LOG(LOG_LEVEL_INFO) << "Fuzzer generation for "
-                            << function_dump->name_ << "(...) went successful.";
+        LOG(LOG_LEVEL_INFO) << "Executable '"
+                            << fuzzer_executable_path << "' created.";
+        LOG(LOG_LEVEL_INFO) << "Fuzzer generation for '"
+                            << function_dump->name_ << "' went successful.";
     }
 
     return true;
@@ -549,6 +574,11 @@ void SourceWrapper::ConstructFuzzerExecutablePath(
 
 bool SourceWrapper::WriteFuzzerContentToFile(
         File& file, const std::string& fuzzer_content) {
+
+    if (fuzzer_content.empty()) {
+        return false;
+    }
+
     if (!override_) {
         if (file.Exists()) {
             // Trying overriding the existing file without due permissions on
@@ -564,7 +594,7 @@ bool SourceWrapper::WriteFuzzerContentToFile(
     }
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "File " << file.GetPath() << " created.";
+        LOG(LOG_LEVEL_INFO) << "File '" << file.GetPath() << "' created.";
     }
 
     int64_t bytes = file.Write(fuzzer_content, fuzzer_content.size());
@@ -574,8 +604,8 @@ bool SourceWrapper::WriteFuzzerContentToFile(
     }
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Fuzzer data has been written to "
-                            << file.GetPath() << ".";
+        LOG(LOG_LEVEL_INFO) << "Fuzzer data has been written to '"
+                            << file.GetPath() << "'.";
     }
 
     file.Close();
@@ -605,7 +635,7 @@ void SourceWrapper::EmptyGarbage() {
     if (auto_deletion_) {
         std::for_each(garbage_.begin(), garbage_.end(), [](File& file) {
             if (LOGGER_ON) {
-                LOG(LOG_LEVEL_INFO) << "Delete " << file.GetPath() << ".";
+                LOG(LOG_LEVEL_INFO) << "Delete '" << file.GetPath() << "'.";
             }
 
             file.Delete();

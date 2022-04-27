@@ -20,8 +20,8 @@ bool FrontendVisitor::VisitFunctionDecl(clang::FunctionDecl* declaration) {
     // The function is found
     // Get the function's location in the file
     const clang::SourceLocation start_location =
-            declaration->getSourceRange().getBegin();
-    const clang::SourceLocation end_location =
+            declaration->getDefinition()->getSourceRange().getBegin();
+    const clang::SourceLocation end_location   =
             declaration->getBody()->getSourceRange().getBegin();
 
     clang::SourceRange range(start_location, end_location);
@@ -34,16 +34,20 @@ bool FrontendVisitor::VisitFunctionDecl(clang::FunctionDecl* declaration) {
             context_->getLangOpts()
             );
 
-    uint64_t position = code_snippet.str().rfind(')');
-    if (position == std::string::npos) {
+    if (code_snippet.empty()) {
         // No function declaration was found
         function_location_.entity_    = "";
         function_location_.is_filled_ = false;
     } else {
-        // Dump function's data
+        // Dump function declaration
         std::string function_declaration =
-                code_snippet.substr(0, position + 1).str();
+                          code_snippet.substr(0, code_snippet.size() - 1).str();
+        while (function_declaration.ends_with('\n')) {
+            function_declaration.pop_back();
+        }
         function_declaration += ";";
+
+        // Store function declaration
         function_location_.entity_    = function_declaration;
         function_location_.is_filled_ = true;
     }

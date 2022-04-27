@@ -3,6 +3,7 @@
 
 #include "module.h"
 #include "cfg.h"
+#include "logger.h"
 
 #include <algorithm>
 #include <queue>

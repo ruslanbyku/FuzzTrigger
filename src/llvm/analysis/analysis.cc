@@ -34,6 +34,10 @@ void Analysis::DumpModule(llvm::Module& module) {
     // --------------------------------------------------------------------- //
     //                         General module data                           //
     // --------------------------------------------------------------------- //
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Extract general information.";
+    }
+
     // Dump module name
     module_dump_->name_             = module.getModuleIdentifier();
     // Dump module corresponding source file
@@ -41,21 +45,43 @@ void Analysis::DumpModule(llvm::Module& module) {
     // Dump number of functions
     module_dump_->functions_number_ = module.getFunctionList().size();
 
+    if (LOGGER_ON) {
+        if (module_dump_->functions_number_ == 1) {
+            LOG(LOG_LEVEL_INFO) << "1 function found.";
+        } else {
+            LOG(LOG_LEVEL_INFO) << module_dump_->functions_number_
+                                << " functions found.";
+        }
+    }
+
     // --------------------------------------------------------------------- //
     //                      Check module's legitimacy                        //
     // --------------------------------------------------------------------- //
     result = IsModuleLegit(module_dump_->source_name_,
                                                module_dump_->functions_number_);
     if (!result) {
+        if (LOGGER_ON) {
+            LOG(LOG_LEVEL_ERROR) << "The analyzing module seems "
+                                    "invalid. Abort.";
+        }
+
         // The module structure is not acceptable
         module_dump_->success_ = result;
 
         return;
     }
 
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "The analyzing module seems valid. Proceed.";
+    }
+
     // --------------------------------------------------------------------- //
     //                            Construct CFGs                             //
     // --------------------------------------------------------------------- //
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Construct CFGs for the module.";
+    }
+
     result = TraverseModule(module);
     if (!result) {
         // Can not traverse the module
@@ -64,20 +90,32 @@ void Analysis::DumpModule(llvm::Module& module) {
         return;
     }
 
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "CFGs constructed.";
+    }
+
     // --------------------------------------------------------------------- //
     //                         Dump module functions                         //
     // --------------------------------------------------------------------- //
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Traverse module's functions.";
+    }
+
     // Dump local functions
     result = DumpModuleFunctions(module, module_cfg_);
     if (!result) {
         // This branch is irrelevant
     }
 
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Traversal went successful.";
+    }
+
     // --------------------------------------------------------------------- //
     //                          Dump module structs                          //
     // --------------------------------------------------------------------- //
     // TURN OFF STRUCT DUMP FOR NOW
-    result = DumpModuleStructs(module);
+    //result = DumpModuleStructs(module);
     if (!result) {
         // There are no structs in the module
     }
@@ -118,8 +156,21 @@ bool Analysis::TraverseModule(llvm::Module& module) {
             root_functions = GetRootFunctions(module);
 
     if (root_functions.empty()) {
+        if (LOGGER_ON) {
+            LOG(LOG_LEVEL_ERROR) << "No root functions found. Abort.";
+        }
+
         // No root function, do not know how to traverse the module, quit
         return false;
+    }
+
+    if (LOGGER_ON) {
+        if (root_functions.size() == 1) {
+            LOG(LOG_LEVEL_INFO) << "1 root function found.";
+        } else {
+            LOG(LOG_LEVEL_INFO) << root_functions.size()
+                                << " root functions found.";
+        }
     }
 
     for (const auto* root_function: root_functions) {
@@ -129,6 +180,11 @@ bool Analysis::TraverseModule(llvm::Module& module) {
     //PrintCFG();
 
     if (module_cfg_.empty() || function_cfg_.empty()) {
+        if (LOGGER_ON) {
+            LOG(LOG_LEVEL_ERROR) << "Something went wrong during making CFGs "
+                                    "for the module. Abort.";
+        }
+
         // Something went wrong during making CFG, and the containers are empty
         return false;
     }
@@ -717,7 +773,7 @@ bool Analysis::IsStandalone(const llvm::Function& function) {
 
 bool Analysis::DumpModuleStructs(llvm::Module& module) {
     std::vector<llvm::StructType*> module_structs =
-            module.getIdentifiedStructTypes();
+                                              module.getIdentifiedStructTypes();
 
     // Check if structs are present in the module
     uint64_t structs_number = module_structs.size();

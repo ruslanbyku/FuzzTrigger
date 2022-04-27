@@ -55,7 +55,7 @@ namespace Compiler {
 
         // Construct a command to be compiled
         command += cpp_compiler;
-        command += " -O2";
+        command += " -O0";
         command += " -g";
         command += " -fno-omit-frame-pointer";
         command += " -fsanitize=address,fuzzer";
@@ -87,6 +87,7 @@ namespace Compiler {
 
         // Construct a command to be compiled
         command += c_compiler;
+        command += " -O0";
         command += " -emit-llvm ";
         command += source.GetPath();
         command += " -S ";
