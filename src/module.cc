@@ -1,6 +1,7 @@
 #include "module.h"
 
-Module::Module() : success_(false), functions_number_(0) {}
+Module::Module()
+: success_(false), functions_number_(0), standalone_funcs_number_(0) {}
 
 Module::operator bool() const {
     return success_;

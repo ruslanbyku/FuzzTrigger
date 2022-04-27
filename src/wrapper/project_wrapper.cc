@@ -201,7 +201,7 @@ bool ProjectWrapper::LaunchRoutine() {
 }
 
 bool ProjectWrapper::PerformAnalysis() {
-    PassLauncher pass_on_source(ir_project_.GetPath());
+                             PassLauncher pass_on_source(ir_project_.GetPath());
 
     if (!pass_on_source.LaunchAnalysis(module_dump_)) {
         return false;
@@ -215,6 +215,6 @@ bool ProjectWrapper::PerformAnalysis() {
 }
 
 bool ProjectWrapper::PerformGeneration(
-        const std::unique_ptr<Function>& function_dump) {
+                               const std::unique_ptr<Function>& function_dump) {
     return true;
 }

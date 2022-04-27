@@ -70,7 +70,6 @@ std::pair<bool, std::string> FuzzerGenerator::GenerateArguments() {
             case TYPE_INT64:
             case TYPE_FLOAT:
             case TYPE_DOUBLE:
-            case TYPE_BOOL:   // ?
             case TYPE_STRUCT:
             case TYPE_FUNC:
             case TYPE_ARRAY:

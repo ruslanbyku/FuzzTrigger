@@ -12,8 +12,7 @@
 enum BaseType : uint8_t {
     TYPE_UNKNOWN,
     TYPE_VOID,
-    TYPE_BOOL,
-    TYPE_INT8,
+    TYPE_INT8,  // + bool type
     TYPE_INT16,
     TYPE_INT32,
     TYPE_INT64,

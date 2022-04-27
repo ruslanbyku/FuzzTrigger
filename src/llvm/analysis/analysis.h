@@ -4,6 +4,7 @@
 #include "module.h"
 #include "cfg.h"
 
+#include <algorithm>
 #include <queue>
 #include <map>
 
@@ -57,10 +58,10 @@ private:
     // Helpers to the main function
     bool IsModuleLegit(const std::string&, uint64_t) const;
     bool TraverseModule(llvm::Module&);
-    void DumpModuleStructs(llvm::Module&);
-    bool DumpModuleFunctions(llvm::Module&, const FunctionCFGPtr&);
+    bool DumpModuleStructs(llvm::Module&);
+    bool DumpModuleFunctions(llvm::Module&, const std::vector<FunctionCFGPtr>&);
     std::unique_ptr<Function> DumpSingleFunction(const llvm::Function&);
-    void DumpFunctionArguments(const llvm::Function&,
+    bool DumpFunctionArguments(const llvm::Function&,
                                std::unique_ptr<Function>&);
     std::unique_ptr<Argument> DumpSingleArgument(const llvm::Argument&);
 
@@ -79,9 +80,9 @@ private:
     std::unique_ptr<Type> ResolveStructType(llvm::Type*, llvm::Type*);
 
     // Discover standalone functions
-    void GetLocalGlobals(llvm::Module&,
-                         std::vector<const llvm::GlobalVariable*>&);
-    void FindStandaloneFunctions(llvm::Module&, const AdjacencyList&);
+    std::vector<const llvm::GlobalVariable*> GetLocalGlobals(llvm::Module&);
+    std::set<const llvm::Function*> FindStandaloneFunctions(
+                                           llvm::Module&, const AdjacencyList&);
     bool IsStandalone(const llvm::Function&);
 };
 
