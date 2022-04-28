@@ -17,6 +17,7 @@
 #include <llvm/IR/DataLayout.h>
 #include <llvm/Analysis/CallGraph.h>
 
+using SpecialGlobals   = std::vector<const llvm::GlobalVariable*>;
 using FunctionCFGPtr   = std::unique_ptr<CFG<llvm::Function>>;
 using BasicBlockCFGPtr = std::unique_ptr<CFG<llvm::BasicBlock>>;
 
@@ -43,8 +44,7 @@ private:
     std::unique_ptr<Module>&          module_dump_;
 
     std::unique_ptr<llvm::DataLayout> data_layout_;
-
-    std::set<std::string>             visited_structs_;
+    SpecialGlobals                    special_globals_;
 
     // CFG of all functions in the module
     std::vector<FunctionCFGPtr>       module_cfg_;
@@ -53,37 +53,44 @@ private:
 
     std::set<const llvm::Function*>   standalone_functions_;
 
+    //
     // Main function
+    //
     void DumpModule(llvm::Module&);
 
+    //
     // Helpers to the main function
+    //
     bool IsModuleLegit(const std::string&, uint64_t) const;
-    bool TraverseModule(llvm::Module&);
-    bool DumpModuleStructs(llvm::Module&);
-    bool DumpModuleFunctions(llvm::Module&, const std::vector<FunctionCFGPtr>&);
-    std::unique_ptr<Function> DumpSingleFunction(const llvm::Function&);
-    bool DumpFunctionArguments(const llvm::Function&,
-                               std::unique_ptr<Function>&);
-    std::unique_ptr<Argument> DumpSingleArgument(const llvm::Argument&);
-
-    FunctionLinkage GetFunctionLinkage(llvm::GlobalValue::LinkageTypes) const;
 
     // CFG related stuff
+    bool TraverseModule(llvm::Module&);
     std::vector<const llvm::Function*> GetRootFunctions(llvm::Module&) const;
     uint32_t MakeControlFlowGraph(const llvm::Function&,
                                   const llvm::Function* = nullptr,
                                   uint32_t = 0);
+
+    bool DumpModuleFunctions(const std::vector<FunctionCFGPtr>&);
+    std::unique_ptr<Function> DumpSingleFunction(const llvm::Function&);
+    bool DumpFunctionArguments(const llvm::Function&,
+                               std::unique_ptr<Function>&);
+    std::unique_ptr<Argument> DumpSingleArgument(const llvm::Argument&);
+    bool DumpModuleStructs(llvm::Module&);
+
+    FunctionLinkage GetFunctionLinkage(llvm::GlobalValue::LinkageTypes) const;
+
     void PrintCFG() const;
 
-    // Type variable stuff
+    // Variable type recognition
     std::unique_ptr<Type> ResolveValueType(llvm::Type*);
     std::unique_ptr<Type> ResolveIntegerType(llvm::Type*, llvm::Type*);
     std::unique_ptr<Type> ResolveStructType(llvm::Type*, llvm::Type*);
 
     // Discover standalone functions
-    std::vector<const llvm::GlobalVariable*> GetLocalGlobals(llvm::Module&);
-    std::set<const llvm::Function*> FindStandaloneFunctions(
-                                           llvm::Module&, const AdjacencyList&);
+    std::vector<const llvm::GlobalVariable*>
+                                         GetModuleSpecialGlobals(llvm::Module&);
+    std::set<const llvm::Function*>
+                                  FindStandaloneFunctions(const AdjacencyList&);
     bool IsStandalone(const llvm::Function&);
 };
 

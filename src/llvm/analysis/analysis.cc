@@ -3,7 +3,7 @@
 char Analysis::ID = 0;
 
 Analysis::Analysis(std::unique_ptr<Module>& module_dump)
-: llvm::ModulePass(ID), module_dump_(module_dump) {}
+: llvm::ModulePass(ID), module_dump_(module_dump){}
 
 
 llvm::StringRef Analysis::getPassName() const {
@@ -14,10 +14,21 @@ llvm::StringRef Analysis::getPassName() const {
 //                              Run Pass manager                             //
 // ------------------------------------------------------------------------- //
 bool Analysis::runOnModule(llvm::Module& module) {
+    // Explicitly redefine the success flag
+    module_dump_->success_ = false;
+
     // --------------------------------------------------------------------- //
     //                 Prepare module's auxiliary information                //
     // --------------------------------------------------------------------- //
-    data_layout_ = std::make_unique<llvm::DataLayout>(&module);
+    // Need to resolve data types
+    data_layout_     = std::make_unique<llvm::DataLayout>(&module);
+    // Need to resolve standalone functions
+    special_globals_ = GetModuleSpecialGlobals(module);
+
+    if (!data_layout_) {
+        // Some data was not initialized, abort
+        return false;
+    }
 
     // --------------------------------------------------------------------- //
     //                        Dump the whole module                          //
@@ -26,6 +37,34 @@ bool Analysis::runOnModule(llvm::Module& module) {
 
     // The module has not been modified, then return false
     return false;
+}
+
+std::vector<const llvm::GlobalVariable*>
+Analysis::GetModuleSpecialGlobals(llvm::Module& module) {
+
+    std::vector<const llvm::GlobalVariable*> special_globals;
+    const llvm::SymbolTableList<llvm::GlobalVariable>& global_list =
+                                                         module.getGlobalList();
+
+    // By my observations there are 3 main groups of globals:
+    // 1) String literals             (-)
+    // 2) dso_local globals           (+)
+    // 3) rest: stdout, stdin, stderr (-)
+    for (const llvm::GlobalVariable& global: global_list) {
+
+        if (global.isConstant()) {
+            // String literal, leave it
+            continue;
+        }
+
+        // Not sure about the accuracy of this filter
+        if (global.isDSOLocal()) {
+            // dso_local
+            special_globals.push_back(&global);
+        }
+    }
+
+    return special_globals;
 }
 
 void Analysis::DumpModule(llvm::Module& module) {
@@ -102,7 +141,7 @@ void Analysis::DumpModule(llvm::Module& module) {
     }
 
     // Dump local functions
-    result = DumpModuleFunctions(module, module_cfg_);
+    result = DumpModuleFunctions(module_cfg_);
     if (!result) {
         // This branch is irrelevant
     }
@@ -114,8 +153,7 @@ void Analysis::DumpModule(llvm::Module& module) {
     // --------------------------------------------------------------------- //
     //                          Dump module structs                          //
     // --------------------------------------------------------------------- //
-    // TURN OFF STRUCT DUMP FOR NOW
-    //result = DumpModuleStructs(module);
+    result = DumpModuleStructs(module);
     if (!result) {
         // There are no structs in the module
     }
@@ -450,7 +488,7 @@ uint32_t Analysis::MakeControlFlowGraph(const llvm::Function& function,
     return function_id;
 }
 
-bool Analysis::DumpModuleFunctions(llvm::Module& module,
+bool Analysis::DumpModuleFunctions(
                                 const std::vector<FunctionCFGPtr>& module_cfg) {
 
     for (const auto& functions_cfg: module_cfg) {
@@ -470,7 +508,7 @@ bool Analysis::DumpModuleFunctions(llvm::Module& module,
         // ------------------------------------------------------------------ //
         // Find non-dependant functions (from other functions or global values)
         std::set<const llvm::Function*> standalone_functions =
-                           FindStandaloneFunctions(module, func_adjacency_list);
+                                   FindStandaloneFunctions(func_adjacency_list);
 
         if (standalone_functions.empty()) {
             // There are no standalone functions in the current adjacency list
@@ -610,7 +648,7 @@ std::unique_ptr<Type> Analysis::ResolveValueType(llvm::Type* data_type) {
     std::unique_ptr<Type>   type_dump;
 
     // ---------------------------------------------------------------------- //
-    //                          Dig a base type                               //
+    //                        Dig to the base type                            //
     // ---------------------------------------------------------------------- //
     // If there are pointers, then bring up a base type
     while (base_type->isPointerTy()) {
@@ -619,14 +657,14 @@ std::unique_ptr<Type> Analysis::ResolveValueType(llvm::Type* data_type) {
                  llvm::dyn_cast<llvm::PointerType>(base_type)->getElementType();
     }
 
-
     // ---------------------------------------------------------------------- //
-    //                       Resolve the base type                            //
+    //                        Resolve the base type                           //
     // ---------------------------------------------------------------------- //
     if (base_type->isVoidTy()) {
 
-        type_dump             = std::make_unique<Type>();
-        type_dump->base_type_ = TYPE_VOID;
+        type_dump                   = std::make_unique<Type>();
+        type_dump->base_type_       = TYPE_VOID;
+        type_dump->allocation_size_ = 0;
 
     } else if (base_type->isIntegerTy()) {
 
@@ -651,19 +689,23 @@ std::unique_ptr<Type> Analysis::ResolveValueType(llvm::Type* data_type) {
     } else if (base_type->isFunctionTy()) {
 
         //TODO: Resolve function type
-        type_dump                 = std::make_unique<FunctionType>();
-        auto function_dump        = static_cast<FunctionType*>(type_dump.get());
-        function_dump->base_type_ = TYPE_FUNC;
+        type_dump                       = std::make_unique<FunctionType>();
+        auto function_dump              =
+                                    static_cast<FunctionType*>(type_dump.get());
+        function_dump->base_type_       = TYPE_FUNC;
+        function_dump->allocation_size_ = 0;
 
     } else if (base_type->isArrayTy()) {
 
         //TODO: Resolve array type
-        type_dump             = std::make_unique<Type>();
-        type_dump->base_type_ = TYPE_ARRAY;
+        type_dump                   = std::make_unique<Type>();
+        type_dump->base_type_       = TYPE_ARRAY;
+        type_dump->allocation_size_ = 0;
 
     } else {
-        type_dump             = std::make_unique<Type>();
-        type_dump->base_type_ = TYPE_UNKNOWN;
+        type_dump                   = std::make_unique<Type>();
+        type_dump->base_type_       = TYPE_UNKNOWN;
+        type_dump->allocation_size_ = 0;
     }
 
     // Save a pointer depth as well
@@ -701,13 +743,15 @@ std::unique_ptr<Type> Analysis::ResolveIntegerType(llvm::Type* data_type,
     return type_dump;
 }
 
-std::set<const llvm::Function*> Analysis::FindStandaloneFunctions(
-                    llvm::Module& module, const AdjacencyList& adjacency_list) {
+std::set<const llvm::Function*>
+        Analysis::FindStandaloneFunctions(const AdjacencyList& adjacency_list) {
     std::set<const llvm::Function*> standalone_functions;
 
     // ---------------------------------------------------------------------- //
     //                          Filer by functions                            //
     // ---------------------------------------------------------------------- //
+    // The basic filter that identifies whether a function calls other inner
+    // functions (local with definition)
     for (const auto& pair: adjacency_list) {
         // // Found a pair with an empty LinkedList [vertex_id -> None]
         if (!pair.second.empty()) {
@@ -723,9 +767,9 @@ std::set<const llvm::Function*> Analysis::FindStandaloneFunctions(
     // ---------------------------------------------------------------------- //
     //                           Filer by globals                             //
     // ---------------------------------------------------------------------- //
-    std::vector<const llvm::GlobalVariable*> globals = GetLocalGlobals(module);
-
-    for (const llvm::GlobalVariable* global: globals) {
+    // Some functions might be dependant to global variables which do not
+    // make them standalone anymore
+    for (const llvm::GlobalVariable* global: special_globals_) {
 
         for (const llvm::User* user: global->users()) {
 
@@ -745,28 +789,6 @@ std::set<const llvm::Function*> Analysis::FindStandaloneFunctions(
     return standalone_functions;
 }
 
-std::vector<const llvm::GlobalVariable*> Analysis::GetLocalGlobals(
-                                                         llvm::Module& module) {
-
-    std::vector<const llvm::GlobalVariable*> globals;
-    const llvm::SymbolTableList<llvm::GlobalVariable>& global_list =
-                                                         module.getGlobalList();
-
-    for (const llvm::GlobalVariable& global: global_list) {
-        // If a global value is a string literal, leave it
-        if (global.isConstant()) {
-            continue;
-        }
-
-        // If the global is defined 'locally', that is what we are seeking out
-        if (global.isDSOLocal()) {
-            globals.push_back(&global);
-        }
-    }
-
-    return globals;
-}
-
 bool Analysis::IsStandalone(const llvm::Function& function) {
     return standalone_functions_.contains(&function);
 }
@@ -784,148 +806,120 @@ bool Analysis::DumpModuleStructs(llvm::Module& module) {
 
     // Allocate space in vector for module structs
     module_dump_->structs_.reserve(structs_number);
-    // In regard to the LLVM IR struct representation, it is better to
-    // analyze them from the end. So reverse them and start the analysis.
-    std::ranges::reverse(module_structs);
 
     // Iterate over module structs in reverse order
     for (auto struct_type: module_structs) {
 
-        // Dump a struct
-        std::unique_ptr<Type> type_dump = ResolveValueType(struct_type);
+        std::unique_ptr<Type> type_dump =
+                                        ResolveStructType(struct_type, nullptr);
 
-        // Cast Type to StructType as we are sure, that there is a StructType
-        // object beneath.
-        auto _struct_ = static_cast<StructType*>(type_dump.release());
-        std::shared_ptr<StructType> struct_dump(_struct_);
+        auto struct_type_dump = static_cast<StructType*>(type_dump.release());
+        std::unique_ptr<StructType> struct_dump(struct_type_dump);
 
         // Append the dumped struct to the vector of module structs
         module_dump_->structs_.push_back(std::move(struct_dump));
-
     }
 
     return true;
 }
 
-//
-// How this method works:
-// In the llvm IR representation the below struct will be:
-// struct A {
-//    struct B {
-//        long*  j;
-//        char** k;
-//        bool   l;
-//        struct C {
-//            char n;
-//        } m;
-//    } a;
-//    int*               c;
-//    unsigned short int d;
-//    float              e;
-//    double             f;
-//    long               h;
-//    int                i;
-//};
-// %struct.A = type { %struct.B, i32*, i16, float, double, i64, i32 }
-// %struct.B = type { i64*, i8**, i8, %struct.C }
-// %struct.C = type { i8 }
-//
-// The method iterates over the IR structs in reverse order and stores it
-// in memory in this order:
-// %struct.C = type { i8 }
-// %struct.B = type { i64*, i8**, i8, [address_to_struct.C] }
-// %struct.A = type { [address_to_struct.B], i32*, i16, float, double, i64, i32 }
-//
 std::unique_ptr<Type> Analysis::ResolveStructType(llvm::Type* data_type,
                                                   llvm::Type* base_type) {
     // Create an object where to dump found data
     std::unique_ptr<Type> type_dump = std::make_unique<StructType>();
     auto struct_dump                = static_cast<StructType*>(type_dump.get());
-    // Get actual data about the found struct
-    auto struct_type                =
-                                    llvm::dyn_cast<llvm::StructType>(base_type);
 
-    // Identify struct name
-    struct_dump->name_              = struct_type->getStructName();
+    struct_dump->base_type_         = TYPE_STRUCT;
 
-    // --------------------------------------------------------------------- //
-    //                       Resolve a struct pointer                        //
-    // --------------------------------------------------------------------- //
-    // If the data type is a pointer
-    if (data_type != base_type) {
-        // Fetch general data about the struct
-        struct_dump->is_original_     = false;
-        struct_dump->base_type_       = TYPE_STRUCT;
+    // ---------------------------------------------------------------------- //
+    //                 A single struct field declaration                      //
+    // ---------------------------------------------------------------------- //
+    if (base_type != nullptr) {
+
+        // A single struct field declaration is a struct inside a struct
+        // definition. Do not dig into the declaration recursively as
+        // it might become tricky one day. Dump basic data. It will be enough
+        // to find the corresponding definition by the declaration name.
+
+        auto struct_type              = llvm::cast<llvm::StructType>(base_type);
+
+        struct_dump->name_            = struct_type->getStructName();
+
         struct_dump->allocation_size_ =
                                       data_layout_->getTypeAllocSize(data_type);
 
+        struct_dump->is_definition_   = false;
+
+        // + [pointer_depth_] will be set up ahead
+
+        struct_dump->body_            = nullptr;
+
         return type_dump;
     }
 
-    // --------------------------------------------------------------------- //
-    //                        Resolve a hollow struct                        //
-    // --------------------------------------------------------------------- //
-    // Determine whether the struct has been already registered
-    if (visited_structs_.contains(struct_dump->name_)) {
-        // The struct already exists
-        // The current struct will be a link to the original one (with the
-        // body/definition)
-        struct_dump->is_original_ = false;
-        for (auto& registered_struct: module_dump_->structs_) {
-            // Find previously registered struct
-            if (registered_struct->name_ == struct_dump->name_) {
-                // The registered struct is found, check if it is original, i.e.
-                // has a body (definition)
-                if (registered_struct->is_original_) {
-                    // The registered struct has a body, store the address of
-                    // the found struct address to the current analyzing struct
-                    struct_dump->base_type_       = TYPE_STRUCT;
-                    struct_dump->allocation_size_ =
-                                      data_layout_->getTypeAllocSize(data_type);
-                    struct_dump->content_         = registered_struct;
-                }
-            }
-        }
+    // ---------------------------------------------------------------------- //
+    //                          Struct definition                             //
+    // ---------------------------------------------------------------------- //
+    auto struct_type                  = llvm::cast<llvm::StructType>(data_type);
 
-        return type_dump;
+    struct_dump->name_                = struct_type->getStructName();
 
-    } else {  // This struct does not exist, register a new entry
-        visited_structs_.insert(struct_dump->name_);
-    }
+    struct_dump->pointer_depth_       = 0;
 
-    // --------------------------------------------------------------------- //
-    //                        Resolve a solid struct                         //
-    // --------------------------------------------------------------------- //
-    // Fetch general data about the struct
-    struct_dump->base_type_           = TYPE_STRUCT;
+    struct_dump->is_definition_       = true;
 
-    // Create the body/definition of the struct
+    // Create a new body for a struct
     std::unique_ptr<Body> struct_body = std::make_unique<Body>();
-    struct_dump->is_original_         = true;
 
-    if (!struct_type->isOpaque()) { // Struct has the body, dig into
+    // Empty struct definition
+    if (struct_type->isOpaque()) {
+        // Struct definition is opaque, nothing to discover (it is empty)
+        //
+        // Explicitly reassign default values, just to make sure
+        struct_body->number_of_fields_ = 0;
 
-        struct_dump->allocation_size_ =
+        // Size of the struct in bytes
+        struct_body->size_             = 0;
+
+        struct_body->alignment_        = 0;
+        // +
+        struct_dump->allocation_size_  = 0;
+
+        struct_dump->body_             = std::move(struct_body);
+
+        return type_dump;
+    }
+
+    struct_dump->allocation_size_           =
                                       data_layout_->getTypeAllocSize(data_type);
 
-        // Auxiliary data to the main struct info, it provides:
-        // 1. Size of the struct in bytes
-        // 2. Alignment of the struct fields (8 bytes encountered so far)
-        // 3. Offset of each field in the struct
-        const llvm::StructLayout* struct_layout =
+    const llvm::StructLayout* struct_layout =
                                      data_layout_->getStructLayout(struct_type);
-        struct_body->number_of_fields_          = struct_type->getNumElements();
-        struct_body->size_                      =
-                                                struct_layout->getSizeInBytes();
-        struct_body->alignment_                 =
+
+    struct_body->number_of_fields_          = struct_type->getNumElements();
+
+    // Size of a struct in bytes
+    struct_body->size_                      = struct_layout->getSizeInBytes();
+
+    // Alignment of the struct fields (8 bytes encountered so far)
+    struct_body->alignment_                 =
                    static_cast<uint16_t>(struct_layout->getAlignment().value());
+
+    // ---------------------------------------------------------------------- //
+    //                        Struct fields definition                        //
+    // ---------------------------------------------------------------------- //
+    if (struct_body->number_of_fields_ != 0) {
 
         // Allocate space for struct fields
         struct_body->fields_.reserve(struct_body->number_of_fields_);
-        // Iterate over the struct fields
+
+        // Offset of each field in the struct
         uint64_t offset = 0;
         llvm::Type* field_type;
+
+        // Iterate over the struct fields
         for (uint32_t idx = 0; idx < struct_body->number_of_fields_; ++idx) {
+
             offset     = struct_layout->getElementOffset(idx);
             field_type = struct_type->getElementType(idx);
 
@@ -938,19 +932,14 @@ std::unique_ptr<Type> Analysis::ResolveStructType(llvm::Type* data_type,
             // 1. the offset of the field in the struct
             // 2. the type of the field
             struct_body->fields_.emplace_back(
-                    std::make_pair(offset,std::move(field_type_dump)));
+                    std::make_pair(offset, std::move(field_type_dump)));
         }
-
-    } else { // Struct definition is opaque, nothing to discover
-        // Explicitly reassign default value, just to make sure
-        struct_body->number_of_fields_ = 0;
     }
 
-    struct_dump->content_ = std::move(struct_body);
+    struct_dump->body_ = std::move(struct_body);
 
     return type_dump;
 }
-
 
 void Analysis::PrintCFG() const {
     llvm::outs() << "CFG of module functions\n";

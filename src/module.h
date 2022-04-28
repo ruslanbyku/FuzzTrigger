@@ -21,7 +21,6 @@ struct Module {
     Module& operator=(Module&&)      = delete;
 
     explicit operator bool() const;
-    std::shared_ptr<StructType> GetStructByName(const std::string&) const;
 
     bool                                     success_;
 
@@ -29,7 +28,7 @@ struct Module {
     std::string                              source_name_;
 
     // Definition of structs
-    std::vector<std::shared_ptr<StructType>> structs_;
+    std::vector<std::unique_ptr<StructType>> structs_;
 
     // external + internal
     uint64_t                                 functions_number_;

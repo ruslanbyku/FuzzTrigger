@@ -6,7 +6,6 @@
 #include <vector>
 #include <set>
 #include <memory>
-#include <variant>
 #include <algorithm>
 
 enum BaseType : uint8_t {
@@ -58,25 +57,18 @@ struct Body {
     std::vector<StructField> fields_;
 };
 
-// Content consists of a union:
-// std::variant
-//     |__std::shared_ptr<StructType> (the address to the struct with a body)
-//     |__std::unique_ptr<Body>       (actual content (body) of the struct)
-struct StructType;
-using Content = std::variant<std::shared_ptr<StructType>,
-                                                     std::unique_ptr<Body>>;
-
 struct StructType : public Type {
-    explicit StructType() : Type(), is_original_(true)  {}
+    explicit StructType() : Type(), is_definition_(true)  {}
     ~StructType() override                   = default;
     StructType(const StructType&)            = delete;
     StructType& operator=(const StructType&) = delete;
     StructType(StructType&&)                 = delete;
     StructType& operator=(StructType&&)      = delete;
 
-    std::string name_;
-    bool        is_original_;
-    Content     content_;
+    std::string           name_;
+    bool                  is_definition_;
+
+    std::unique_ptr<Body> body_;
 };
 
 // ------------------------------------------------------------------------- //
