@@ -161,6 +161,7 @@ bool ProjectWrapper::LaunchRoutine() {
     //                           Start analysis                              //
     // --------------------------------------------------------------------- //
     if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "";
         LOG(LOG_LEVEL_INFO) << "Start analysis of '" << ir_project_.GetPath()
                             << "'.";
     }
@@ -168,47 +169,14 @@ bool ProjectWrapper::LaunchRoutine() {
     // Make analysis
     bool analysis_result = PerformAnalysis();
     if (!analysis_result) {
-        // Analysis resulted unsuccessful
+        // Some errors occurred
         return false;
     }
 
     if (LOGGER_ON) {
         LOG(LOG_LEVEL_INFO) << "Analysis went successful.";
+        LOG(LOG_LEVEL_INFO) << "";
     }
-
-    // --------------------------------------------------------------------- //
-    //               Find number of found standalone functions               //
-    // --------------------------------------------------------------------- //
-    if (module_dump_->standalone_funcs_number_ == 0) {
-        if (LOGGER_ON) {
-            LOG(LOG_LEVEL_WARNING) << "There are no standalone functions."
-                                      " Abort.";
-        }
-
-        return true;
-    } else {
-        if (LOGGER_ON) {
-            if (module_dump_->standalone_funcs_number_ == 1) {
-                LOG(LOG_LEVEL_INFO) << "There is 1 standalone function:";
-            } else {
-                LOG(LOG_LEVEL_INFO) << "There are "
-                                    << module_dump_->standalone_funcs_number_
-                                    << " standalone functions:";
-            }
-        }
-    }
-
-    if (LOGGER_ON) {
-        for (auto& function: module_dump_->functions_) {
-            if (!function->is_standalone_) {
-                continue;
-            }
-
-            LOG(LOG_LEVEL_INFO) << "\t" << function->name_;
-        }
-
-    }
-
 
     return true;
 }
@@ -217,10 +185,12 @@ bool ProjectWrapper::PerformAnalysis() {
                              PassLauncher pass_on_source(ir_project_.GetPath());
 
     if (!pass_on_source.LaunchAnalysis(module_dump_)) {
+        // Can not launch analysis
         return false;
     }
 
     if (!*module_dump_) {
+        // Analysis resulted unsuccessful or there are no standalone functions
         return false;
     }
 

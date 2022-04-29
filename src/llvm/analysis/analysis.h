@@ -70,12 +70,16 @@ private:
                                   const llvm::Function* = nullptr,
                                   uint32_t = 0);
 
-    bool DumpModuleFunctions(const std::vector<FunctionCFGPtr>&);
+    std::vector<std::unique_ptr<Function>>
+                        DumpModuleFunctions(const std::vector<FunctionCFGPtr>&);
     std::unique_ptr<Function> DumpSingleFunction(const llvm::Function&);
-    bool DumpFunctionArguments(const llvm::Function&,
-                               std::unique_ptr<Function>&);
+
+    std::vector<std::unique_ptr<Argument>>
+                        DumpFunctionArguments(const llvm::Function&,
+                                              uint16_t arguments_number);
     std::unique_ptr<Argument> DumpSingleArgument(const llvm::Argument&);
-    bool DumpModuleStructs(llvm::Module&);
+
+    std::vector<std::unique_ptr<StructType>> DumpModuleStructs(llvm::Module&);
 
     FunctionLinkage GetFunctionLinkage(llvm::GlobalValue::LinkageTypes) const;
 
@@ -90,7 +94,9 @@ private:
     std::vector<const llvm::GlobalVariable*>
                                          GetModuleSpecialGlobals(llvm::Module&);
     std::set<const llvm::Function*>
-                                  FindStandaloneFunctions(const AdjacencyList&);
+              FindModuleStandaloneFunctions(const std::vector<FunctionCFGPtr>&);
+    std::set<const llvm::Function*>
+                  FindStandaloneFunctionsPerAdjacencyList(const AdjacencyList&);
     bool IsStandalone(const llvm::Function&);
 };
 

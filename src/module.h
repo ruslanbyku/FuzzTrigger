@@ -30,10 +30,11 @@ struct Module {
     // Definition of structs
     std::vector<std::unique_ptr<StructType>> structs_;
 
-    // external + internal
+    // internal + external
     uint64_t                                 functions_number_;
-    std::vector<std::unique_ptr<Function>>   functions_;
     uint64_t                                 standalone_funcs_number_;
+    // Registered only internal functions (external are discarded in process)
+    std::vector<std::unique_ptr<Function>>   functions_;
 };
 
 struct Function {

@@ -119,6 +119,7 @@ bool SourceWrapper::LaunchRoutine() {
     //                           Start analysis                              //
     // --------------------------------------------------------------------- //
     if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "";
         LOG(LOG_LEVEL_INFO) << "Start analysis of '"
                             << ir_source_file_.GetPath() << "'.";
     }
@@ -126,44 +127,13 @@ bool SourceWrapper::LaunchRoutine() {
     // Make analysis
     bool analysis_result = PerformAnalysis();
     if (!analysis_result) {
-        // Analysis resulted unsuccessful
+        // Some errors occurred
         return false;
     }
 
     if (LOGGER_ON) {
         LOG(LOG_LEVEL_INFO) << "Analysis went successful.";
-    }
-
-    // --------------------------------------------------------------------- //
-    //               Find number of found standalone functions               //
-    // --------------------------------------------------------------------- //
-    if (module_dump_->standalone_funcs_number_ == 0) {
-        if (LOGGER_ON) {
-            LOG(LOG_LEVEL_INFO) << "There are no standalone functions. Abort.";
-        }
-
-        return true;
-    } else {
-        if (LOGGER_ON) {
-            if (module_dump_->standalone_funcs_number_ == 1) {
-                LOG(LOG_LEVEL_INFO) << "There is 1 standalone function:";
-            } else {
-                LOG(LOG_LEVEL_INFO) << "There are "
-                                    << module_dump_->standalone_funcs_number_
-                                    << " standalone functions:";
-            }
-        }
-    }
-
-    if (LOGGER_ON) {
-        for (const auto& function: module_dump_->functions_) {
-            if (!function->is_standalone_) {
-                continue;
-            }
-
-            LOG(LOG_LEVEL_INFO) << "\t" << function->name_;
-        }
-
+        LOG(LOG_LEVEL_INFO) << "";
     }
 
     // --------------------------------------------------------------------- //
@@ -219,6 +189,8 @@ bool SourceWrapper::LaunchRoutine() {
     if (LOGGER_ON) {
         LOG(LOG_LEVEL_INFO) << "Directory '" << result_directory_path_
                             << "' created.";
+
+        LOG(LOG_LEVEL_INFO) << "";
         LOG(LOG_LEVEL_INFO) << "Start fuzzer generation process.";
     }
 
@@ -245,6 +217,8 @@ bool SourceWrapper::LaunchRoutine() {
 
     if (LOGGER_ON) {
         LOG(LOG_LEVEL_INFO) << "End of fuzzer generation process.";
+        LOG(LOG_LEVEL_INFO) << "";
+
         if (successful_fuzzer_counter == 1) {
             LOG(LOG_LEVEL_INFO) << "1 fuzzer generated.";
         } else {
@@ -272,10 +246,12 @@ bool SourceWrapper::PerformAnalysis() {
     PassLauncher pass_on_source(ir_source_file_.GetPath());
 
     if (!pass_on_source.LaunchAnalysis(module_dump_)) {
+        // Can not launch analysis
         return false;
     }
 
     if (!*module_dump_) {
+        // Analysis resulted unsuccessful or there are no standalone functions
         return false;
     }
 
