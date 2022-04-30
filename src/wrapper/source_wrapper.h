@@ -2,17 +2,7 @@
 #define AUTOFUZZ_SOURCE_WRAPPER_H
 
 #include "single_function_source_parser.h"
-#include "fuzzer_generator.h"
-#include "pass_launcher.h"
-#include "module.h"
-#include "utils.h"
-#include "compiler.h"
-#include "virtual_mapper.h"
-#include "file.h"
-#include "logger.h"
 #include "wrapper.h"
-
-#include <exception>
 
 class SourceWrapper : public Wrapper {
 public:
@@ -37,8 +27,8 @@ private:
 
     VirtualMapper           memory_;
 
+    // Additional modes
     bool                    auto_deletion_;
-    std::vector<File>       garbage_;
     bool                    random_on_;
     bool                    override_;
 
@@ -56,20 +46,6 @@ private:
     bool PerformAnalysis() override;
     bool PerformGeneration(std::string,
                            const std::unique_ptr<Function>&) override;
-
-    void ConstructResultDirectoryPath();
-    void ConstructFunctionDirectoryPath(const std::string&, std::string&);
-    void ConstructFuzzerStubPath(const std::string&,
-                                 const std::string&, std::string&);
-    void ConstructFuzzerExecutablePath(const std::string&, std::string&);
-
-    bool WriteFuzzerContentToFile(File&, const std::string&);
-
-    bool CreateDirectory(const std::string&);
-
-    void PlaceIntoTemporaryStorage(File&);
-    void PlaceIntoGarbage(File&);
-    void EmptyGarbage();
 };
 
 #endif //AUTOFUZZ_SOURCE_WRAPPER_H

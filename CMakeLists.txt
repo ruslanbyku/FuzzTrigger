@@ -69,6 +69,9 @@ set(SOURCES
         src/llvm/generator/function_declaration.cc
         src/llvm/generator/single_function_source_parser.cc
         src/llvm/generator/single_function_source_parser.h
+        src/llvm/generator/full_source_parser.cc
+        src/llvm/generator/full_source_parser.h
+        src/wrapper/wrapper.cc
         )
 
 #
@@ -77,6 +80,8 @@ set(SOURCES
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 # Disable C++ native RTTI and EH (use RTTI with llvm instead)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti") # -fno-exceptions
+# Turn on basic optimization
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O1")
 
 add_executable(autofuzz ${SOURCES})
 

@@ -1,42 +1,43 @@
-#ifndef AUTOFUZZ_SINGLE_FUNCTION_SOURCE_PARSER_H
-#define AUTOFUZZ_SINGLE_FUNCTION_SOURCE_PARSER_H
+#ifndef AUTOFUZZ_FULL_SOURCE_PARSER_H
+#define AUTOFUZZ_FULL_SOURCE_PARSER_H
 
 #include "function_declaration.h"
+
+using SourceEntity = std::vector<FunctionEntity>;
 
 // ------------------------------------------------------------------------- //
 //                           Frontend Visitor                                //
 // ------------------------------------------------------------------------- //
-class SingleFunctionSourceVisitor
-        : public clang::RecursiveASTVisitor<SingleFunctionSourceVisitor> {
+class FullSourceVisitor : public clang::RecursiveASTVisitor<FullSourceVisitor> {
 public:
-    explicit SingleFunctionSourceVisitor(clang::ASTContext*, FunctionEntity&);
+    explicit FullSourceVisitor(clang::ASTContext*, SourceEntity&);
 
     bool VisitFunctionDecl(clang::FunctionDecl*);
 
 private:
     clang::ASTContext* context_;
-    FunctionEntity&    function_entity_;
+    SourceEntity&      source_entity_;
 };
 
 // ------------------------------------------------------------------------- //
 //                            Frontend Consumer                              //
 // ------------------------------------------------------------------------- //
-class SingleFunctionSourceConsumer : public clang::ASTConsumer {
+class FullSourceConsumer : public clang::ASTConsumer {
 public:
-    explicit SingleFunctionSourceConsumer(clang::ASTContext*, FunctionEntity&);
+    explicit FullSourceConsumer(clang::ASTContext*, SourceEntity&);
 
     void HandleTranslationUnit(clang::ASTContext&) override;
 
 private:
-    SingleFunctionSourceVisitor visitor_;
+    FullSourceVisitor visitor_;
 };
 
 // ------------------------------------------------------------------------- //
 //                             Frontend Action                               //
 // ------------------------------------------------------------------------- //
-class SingleFunctionSourceParser : public clang::ASTFrontendAction {
+class FullSourceParser : public clang::ASTFrontendAction {
 public:
-    explicit SingleFunctionSourceParser(FunctionEntity&);
+    explicit FullSourceParser(SourceEntity&);
 
     std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(
                                             clang::CompilerInstance&,
@@ -44,7 +45,7 @@ public:
                                             ) override;
 
 private:
-    FunctionEntity& function_entity_;
+    SourceEntity& source_entity_;
 };
 
-#endif //AUTOFUZZ_SINGLE_FUNCTION_SOURCE_PARSER_H
+#endif //AUTOFUZZ_FULL_SOURCE_PARSER_H

@@ -13,7 +13,7 @@ SourceWrapper::SourceWrapper(std::string source_file_path, bool auto_deletion,
 }
 
 SourceWrapper::~SourceWrapper() {
-    EmptyGarbage();
+    EmptyGarbage(auto_deletion_);
 }
 
 void SourceWrapper::InitializeState() {
@@ -169,14 +169,23 @@ bool SourceWrapper::LaunchRoutine() {
         LOG(LOG_LEVEL_INFO) << "Create a directory to store program results.";
     }
 
-    // Create a directory to store results
-    ConstructResultDirectoryPath();
+    // Construct a directory path to store results
+    result_directory_path_ = ConstructResultDirectoryPath(
+                                                    working_directory_,
+                                                    source_file_,
+                                                    random_on_);
 
-    if (!CreateDirectory(result_directory_path_)) {
+    if (result_directory_path_.empty()) {
+        // Can not construct a global directory path
+        // working_directory is empty
+        return false;
+    }
+
+    if (!CreateDirectory(result_directory_path_, override_)) {
         if (LOGGER_ON) {
             LOG(LOG_LEVEL_ERROR) << "Directory '"
                                  << result_directory_path_
-                                 << "' was not created.";
+                                 << "' exists.";
         }
 
         return false;
@@ -228,18 +237,26 @@ bool SourceWrapper::LaunchRoutine() {
         // ------------------------------------------------------------------ //
         std::string function_directory_path;
 
-        ConstructFunctionDirectoryPath(
-                         function_dump->name_,
-                         function_directory_path);
+        function_directory_path =
+                ConstructFunctionDirectoryPath(
+                        result_directory_path_,
+                        function_dump->name_,
+                        random_on_);
 
-        if (!CreateDirectory(function_directory_path)) {
+        if (function_directory_path.empty()) {
+            // Can not construct a function directory path
+            // Either result_directory_path or function name is empty
+            return false;
+        }
+
+        if (!CreateDirectory(function_directory_path, override_)) {
             // An error occurred while creating a function directory, but
             // this error does not impede the further program execution, so
             // leave it.
             if (LOGGER_ON) {
                 LOG(LOG_LEVEL_WARNING) << "Directory '"
                                        << function_directory_path
-                                       << "' was not created.";
+                                       << "' exists.";
             }
 
             continue;
@@ -253,10 +270,7 @@ bool SourceWrapper::LaunchRoutine() {
         // ------------------------------------------------------------------ //
         //                         Start generation                           //
         // ------------------------------------------------------------------ //
-        bool generation_result = PerformGeneration(
-                                           function_directory_path,
-                                           function_dump);
-        if (!generation_result) {
+        if (!PerformGeneration(function_directory_path, function_dump)) {
             // 1) Something bad has happened
             // 2) No error occurred, just could not continue to
             // generate a fuzzer
@@ -299,7 +313,10 @@ bool SourceWrapper::LaunchRoutine() {
         LOG(LOG_LEVEL_INFO) << "Close fd = " << source_descriptor << ".";
     }
 
+    // Explicitly unload the file from memory (the destructor will get
+    // it anyway)
     memory_.Unmap();
+    // Close the file descriptor (the destructor will NOT get it)
     source_file_.Close();
 
     return true;
@@ -383,16 +400,13 @@ bool SourceWrapper::PerformGeneration(
         return false;
     }
 
+    // Get file content
     std::string source_content = memory_.GetMapping();
+
     clang::tooling::runToolOnCode(
             std::make_unique<SingleFunctionSourceParser>(function_entity),
             source_content
             );
-
-    if (!function_entity.is_set_) {
-        // Function was not found in the source file
-        return false;
-    }
 
     if (function_entity.declaration_.empty()) {
         // Function declaration was not set
@@ -435,11 +449,20 @@ bool SourceWrapper::PerformGeneration(
     //     Create the fuzzer stub (.cc file) and write fuzzer code to it     //
     // --------------------------------------------------------------------- //
     std::string fuzzer_stub_path;
-    ConstructFuzzerStubPath(function_dump->name_,
-                            function_directory_path, fuzzer_stub_path);
+    fuzzer_stub_path = ConstructFuzzerStubPath(
+                                        function_directory_path,
+                                        function_dump->name_);
+
+    if (fuzzer_stub_path.empty()) {
+        // Can not construct a fuzzer stub path
+        // Either function_directory_path or function name is empty
+        return false;
+    }
+
     File fuzzer_stub_file(fuzzer_stub_path);
 
-    if (!WriteFuzzerContentToFile(fuzzer_stub_file, fuzzer_content)) {
+    if (!WriteFuzzerContentToFile(fuzzer_stub_file,
+                                  fuzzer_content, override_)) {
         return false;
     }
 
@@ -458,6 +481,7 @@ bool SourceWrapper::PerformGeneration(
         // Can not compile the file
         return false;
     }
+
     File ir_fuzzer_stub_file(fuzzer_stub_path);
     ir_fuzzer_stub_file.ReplaceExtension(ir_extension);
 
@@ -502,8 +526,15 @@ bool SourceWrapper::PerformGeneration(
 
     // Compile both IR
     std::string fuzzer_executable_path;
-    ConstructFuzzerExecutablePath(function_directory_path,
-                                  fuzzer_executable_path);
+    fuzzer_executable_path =
+             ConstructFuzzerExecutablePath(function_directory_path);
+
+    if (fuzzer_executable_path.empty()) {
+        // Can not construct a fuzzer executable path
+        // function_directory_path is empty
+        return false;
+    }
+
     File final_executable_file(fuzzer_executable_path);
 
     // Compile all bits and pieces
@@ -524,125 +555,4 @@ bool SourceWrapper::PerformGeneration(
     }
 
     return true;
-}
-
-void SourceWrapper::ConstructResultDirectoryPath() {
-    result_directory_path_ += working_directory_;
-    result_directory_path_ += "/";
-    result_directory_path_ += source_file_.GetStem();
-    result_directory_path_ += "_fuzz_results";
-
-    if (random_on_) {
-        result_directory_path_ += "_";
-        result_directory_path_ +=
-                Utils::ReturnShortenedHash(Utils::GenerateRandom());
-    }
-
-    result_directory_path_ += "/";
-}
-
-void SourceWrapper::ConstructFunctionDirectoryPath(
-        const std::string& function_name, std::string& path) {
-    path += result_directory_path_;
-    path += function_name;
-
-    if (random_on_) {
-        path += "_";
-        path +=
-                Utils::ReturnShortenedHash(Utils::GenerateRandom());
-    }
-
-    path += "/";
-}
-
-void SourceWrapper::ConstructFuzzerStubPath(
-        const std::string& function_name,
-        const std::string& parent_directory, std::string& path) {
-    path += parent_directory;
-    path += "fuzz_";
-    path += function_name;
-    path += ".cc";
-}
-
-void SourceWrapper::ConstructFuzzerExecutablePath(
-        const std::string& parent_directory, std::string& path) {
-    path += parent_directory;
-    path += "fuzzer";
-}
-
-
-bool SourceWrapper::WriteFuzzerContentToFile(
-        File& file, const std::string& fuzzer_content) {
-
-    if (fuzzer_content.empty()) {
-        return false;
-    }
-
-    if (!override_) {
-        if (file.Exists()) {
-            // Trying overriding the existing file without due permissions on
-            // the action
-            return false;
-        }
-    }
-
-    int32_t file_descriptor = file.OpenForWrite();
-    if (file_descriptor == -1) {
-        // Could not create file for fuzzer content
-        return false;
-    }
-
-    if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "File '" << file.GetPath() << "' created.";
-    }
-
-    int64_t bytes = file.Write(fuzzer_content, fuzzer_content.size());
-    if (bytes == -1) {
-        // No bytes were written to the created file
-        return false;
-    }
-
-    if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Fuzzer data has been written to '"
-                            << file.GetPath() << "'.";
-    }
-
-    file.Close();
-
-    return true;
-}
-
-bool SourceWrapper::CreateDirectory(const std::string& path) {
-    File directory(path);
-
-    if (!override_) {
-        if (directory.Exists()) {
-            return false;
-        }
-    }
-
-    directory.CreateDirectory();
-
-    return true;
-}
-
-void SourceWrapper::PlaceIntoGarbage(File& file) {
-    garbage_.push_back(file);
-}
-
-void SourceWrapper::EmptyGarbage() {
-    if (auto_deletion_) {
-        std::for_each(garbage_.begin(), garbage_.end(), [](File& file) {
-
-            if (!file.Exists()) {
-                return;
-            }
-
-            if (LOGGER_ON) {
-                LOG(LOG_LEVEL_INFO) << "Delete '" << file.GetPath() << "'.";
-            }
-
-            file.Delete();
-        });
-    }
 }

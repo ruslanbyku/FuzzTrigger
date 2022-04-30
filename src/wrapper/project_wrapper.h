@@ -1,15 +1,10 @@
 #ifndef AUTOFUZZ_PROJECT_WRAPPER_H
 #define AUTOFUZZ_PROJECT_WRAPPER_H
 
-#include "pass_launcher.h"
-#include "compiler.h"
-#include "module.h"
-#include "file.h"
-#include "logger.h"
+#include "full_source_parser.h"
 #include "wrapper.h"
 
 #include <fstream>
-#include <exception>
 
 class ProjectWrapper : public Wrapper {
 public:
@@ -26,18 +21,19 @@ public:
     bool LaunchRoutine() override;
 
 private:
-    File                    ir_project_;
-    File                    sources_;
-    std::string             working_directory_;
-    std::string             result_directory_path_;
-    std::unique_ptr<Module> module_dump_;
+    File                                ir_project_;
+    File                                sources_;
+    std::string                         working_directory_;
+    std::string                         result_directory_path_;
+    std::unique_ptr<Module>             module_dump_;
 
-    std::set<std::string>   source_paths_;
+    // Additional modes
+    bool                                auto_deletion_;
+    bool                                random_on_;
+    bool                                override_;
 
-    bool                    auto_deletion_;
-    std::vector<File>       garbage_;
-    bool                    random_on_;
-    bool                    override_;
+    std::set<std::string>               source_paths_;
+    std::map<std::string, SourceEntity> function_declarations_;
 
     // Heed this:
     // The method is called in the constructor of the current class, so it can

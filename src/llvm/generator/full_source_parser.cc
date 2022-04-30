@@ -1,71 +1,65 @@
-#include "single_function_source_parser.h"
+#include "full_source_parser.h"
 
 // ------------------------------------------------------------------------- //
 //                           Frontend Visitor                                //
 // ------------------------------------------------------------------------- //
-SingleFunctionSourceVisitor::SingleFunctionSourceVisitor(
+FullSourceVisitor::FullSourceVisitor(
         clang::ASTContext* context,
-        FunctionEntity& function_entity)
-        : context_(context), function_entity_(function_entity) {}
+        SourceEntity& source_entity)
+        : context_(context), source_entity_(source_entity) {}
 
-bool SingleFunctionSourceVisitor::VisitFunctionDecl(
-                                          clang::FunctionDecl* declaration) {
+bool FullSourceVisitor::VisitFunctionDecl(clang::FunctionDecl* declaration) {
     std::string function_name = declaration->getNameAsString();
-
-    if (function_name != function_entity_.name_) {
-        // Proceed the traversal of the AST
-        return true;
-    }
-
-    //
-    // The function is found in a source file
-    //
-
     std::string function_declaration;
 
+    // Function declaration is found
     function_declaration = FunctionDeclaration::Extract(context_, declaration);
+
+    // Save function data
+    FunctionEntity function_entity(function_name);
 
     if (function_declaration.empty()) {
         // No function declaration was found
-        function_entity_.declaration_ = "";
+        function_entity.declaration_ = "";
     } else {
         // Function declaration was found, save it
-        function_entity_.declaration_ = function_declaration;
+        function_entity.declaration_ = function_declaration;
     }
 
-    // Stop the traversal of the AST
-    return false;
+    source_entity_.push_back(std::move(function_entity));
+
+    // Proceed the traversal of the AST
+    return true;
 }
 
 // ------------------------------------------------------------------------- //
 //                            Frontend Consumer                              //
 // ------------------------------------------------------------------------- //
-SingleFunctionSourceConsumer::SingleFunctionSourceConsumer(
+FullSourceConsumer::FullSourceConsumer(
         clang::ASTContext* context,
-        FunctionEntity& function_entity
-) : visitor_(context, function_entity) {}
+        SourceEntity& source_entity
+) : visitor_(context, source_entity) {}
 
-void SingleFunctionSourceConsumer::HandleTranslationUnit(
-                                             clang::ASTContext& context) {
+void FullSourceConsumer::HandleTranslationUnit(clang::ASTContext& context) {
     visitor_.TraverseDecl(context.getTranslationUnitDecl());
 }
 
 // ------------------------------------------------------------------------- //
 //                             Frontend Action                               //
 // ------------------------------------------------------------------------- //
-SingleFunctionSourceParser::SingleFunctionSourceParser(
-        FunctionEntity& function_entity)
-: clang::ASTFrontendAction(), function_entity_(function_entity) {}
+FullSourceParser::FullSourceParser(
+        SourceEntity& source_entity)
+        : clang::ASTFrontendAction(), source_entity_(source_entity) {}
 
 std::unique_ptr<clang::ASTConsumer>
-        SingleFunctionSourceParser::CreateASTConsumer(
+        FullSourceParser::CreateASTConsumer(
                 clang::CompilerInstance& compiler,
                 [[maybe_unused]] llvm::StringRef input_file) {
 
     // Ignore all errors/warnings during parsing of a source file
     compiler.getDiagnostics().setSuppressAllDiagnostics(true);
 
-    return std::make_unique<SingleFunctionSourceConsumer>(
+    return std::make_unique<FullSourceConsumer>(
             &compiler.getASTContext(),
-            function_entity_);
+            source_entity_);
 }

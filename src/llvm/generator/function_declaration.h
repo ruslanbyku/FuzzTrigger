@@ -10,6 +10,15 @@
 #include <clang/Basic/Diagnostic.h>
 #include <clang/Tooling/Tooling.h>
 
+struct FunctionEntity {
+    explicit FunctionEntity(std::string name) : name_(std::move(name)) {}
+
+    std::string name_;
+
+    // If the declaration is found, it is NOT empty
+    std::string declaration_; // There is no "\n" at the end
+};
+
 // Delete comments from sources (https://gist.github.com/ChunMinChang/88bfa5842396c1fbbc5b)
 // r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"', re.DOTALL | re.MULTILINE
 namespace FunctionDeclaration {

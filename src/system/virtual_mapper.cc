@@ -54,6 +54,9 @@ const char* VirtualMapper::GetMapping() const {
 bool VirtualMapper::MapIntoMemory(int32_t protection, int32_t flags,
                                   int32_t file_descriptor, uint64_t file_size,
                                   uint64_t file_offset, void* page_address) {
+    // After the first file has been mapped into memory the internal state
+    // of the memory object is set to the first file. You can not load
+    // into memory the second file until you unmap the first one.
     if (mapping_) {
         return true;
     }
