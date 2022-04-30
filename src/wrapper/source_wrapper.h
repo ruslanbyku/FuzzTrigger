@@ -1,7 +1,7 @@
 #ifndef AUTOFUZZ_SOURCE_WRAPPER_H
 #define AUTOFUZZ_SOURCE_WRAPPER_H
 
-#include "frontend_action.h"
+#include "single_function_source_parser.h"
 #include "fuzzer_generator.h"
 #include "pass_launcher.h"
 #include "module.h"
@@ -54,7 +54,8 @@ private:
     void InitializeState();
 
     bool PerformAnalysis() override;
-    bool PerformGeneration(const std::unique_ptr<Function>&) override;
+    bool PerformGeneration(std::string,
+                           const std::unique_ptr<Function>&) override;
 
     void ConstructResultDirectoryPath();
     void ConstructFunctionDirectoryPath(const std::string&, std::string&);
@@ -66,6 +67,7 @@ private:
 
     bool CreateDirectory(const std::string&);
 
+    void PlaceIntoTemporaryStorage(File&);
     void PlaceIntoGarbage(File&);
     void EmptyGarbage();
 };

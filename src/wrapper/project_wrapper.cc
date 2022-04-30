@@ -198,6 +198,7 @@ bool ProjectWrapper::PerformAnalysis() {
 }
 
 bool ProjectWrapper::PerformGeneration(
-                               const std::unique_ptr<Function>& function_dump) {
+                           std::string function_directory_path,
+                           const std::unique_ptr<Function>& function_dump) {
     return true;
 }

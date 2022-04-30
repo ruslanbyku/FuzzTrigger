@@ -10,7 +10,8 @@ public:
 
 protected:
     virtual bool PerformAnalysis()                                   = 0;
-    virtual bool PerformGeneration(const std::unique_ptr<Function>&) = 0;
+    virtual bool PerformGeneration(std::string,
+                                   const std::unique_ptr<Function>&) = 0;
 };
 
 #endif //AUTOFUZZ_WRAPPER_H

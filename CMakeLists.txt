@@ -59,14 +59,17 @@ set(SOURCES
         src/utils.cc
         src/utils.h
         src/log/logger.h
-        src/llvm/generator/frontend_action.h
-        src/llvm/generator/frontend_action.cc
         src/wrapper/wrapper.h
         src/wrapper/project_wrapper.cc
         src/wrapper/project_wrapper.h
         src/wrapper/source_wrapper.cc
         src/wrapper/source_wrapper.h
-        src/options.h)
+        src/options.h
+        src/llvm/generator/function_declaration.h
+        src/llvm/generator/function_declaration.cc
+        src/llvm/generator/single_function_source_parser.cc
+        src/llvm/generator/single_function_source_parser.h
+        )
 
 #
 # Compilation flags

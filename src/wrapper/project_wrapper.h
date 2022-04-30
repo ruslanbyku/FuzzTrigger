@@ -51,7 +51,8 @@ private:
     void InitializeState();
 
     bool PerformAnalysis() override;
-    bool PerformGeneration(const std::unique_ptr<Function>&) override;
+    bool PerformGeneration(std::string,
+                           const std::unique_ptr<Function>&) override;
 };
 
 

@@ -70,10 +70,28 @@ void File::Delete() noexcept {
     Close();
 
     if (!path_.empty()) {
+        bool deletion_result;
         std::error_code error_code;
-        bool result = std::filesystem::remove(path_, error_code);
+        FileType file_type = GetFileType();
 
-        if (!result) {
+        if (file_type == FILETYPE_REGULAR || file_type == FILETYPE_UNKNOWN) {
+            // Delete a single entity
+            deletion_result = std::filesystem::remove(path_, error_code);
+
+        } else { // FILETYPE_DIRECTORY
+            uint64_t number_of_files;
+
+            // Delete the contents of a directory
+            number_of_files = std::filesystem::remove_all(path_, error_code);
+
+            if (number_of_files == 0) {  // The directory does not exist
+                deletion_result = false;
+            } else {  // More than 1 file was deleted
+                deletion_result = true;
+            }
+        }
+
+        if (!deletion_result) {
             // An error occurred when deleting a file, probably there is
             // already no such file, not a problem
         }
@@ -306,4 +324,3 @@ int64_t File::Write(const std::string& data, uint64_t size) const {
 
     return bytes;
 }
-
