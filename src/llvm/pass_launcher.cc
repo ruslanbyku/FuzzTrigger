@@ -27,7 +27,7 @@ bool PassLauncher::LaunchAnalysis(std::unique_ptr<Module>& module_dump) {
 }
 
 bool PassLauncher::LaunchSanitizer(
-        const std::unique_ptr<Function>& function_dump) {
+        const std::shared_ptr<Function>& function_dump) {
     llvm::SMDiagnostic error;
     llvm::LLVMContext context;
 
@@ -68,7 +68,7 @@ bool PassLauncher::LaunchSanitizer(
 }
 
 bool PassLauncher::LaunchNameCorrector(
-        const std::unique_ptr<Function>& function_dump) {
+        const std::shared_ptr<Function>& function_dump) {
     llvm::SMDiagnostic error;
     llvm::LLVMContext context;
 

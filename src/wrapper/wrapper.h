@@ -1,6 +1,7 @@
 #ifndef AUTOFUZZ_WRAPPER_H
 #define AUTOFUZZ_WRAPPER_H
 
+#include "full_source_parser.h"
 #include "fuzzer_generator.h"
 #include "pass_launcher.h"
 #include "compiler.h"
@@ -22,15 +23,20 @@ protected:
 
     virtual bool PerformAnalysis()                                   = 0;
     virtual bool PerformGeneration(std::string,
-                                   const std::unique_ptr<Function>&) = 0;
+                                   const std::shared_ptr<Function>&,
+                                   std::string)                      = 0;
+    virtual std::string GetDeclaration(const std::string&) const     = 0;
 
-    bool CreateDirectory(const std::string&, bool);
+    SourceEntity FindDeclarationsPerSource(const std::string&,
+                                          const StandaloneFunctions&);
 
     std::string ConstructResultDirectoryPath(
             const std::string&, const File&, bool);
 
     std::string ConstructFunctionDirectoryPath(
             const std::string&, const std::string&, bool);
+
+    bool CreateDirectory(const std::string&, bool);
 
     std::string ConstructFuzzerStubPath(const std::string&, const std::string&);
 

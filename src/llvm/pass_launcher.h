@@ -20,8 +20,8 @@ public:
     explicit PassLauncher(std::string);
 
     bool LaunchAnalysis(std::unique_ptr<Module>&);
-    bool LaunchSanitizer(const std::unique_ptr<Function>&);
-    bool LaunchNameCorrector(const std::unique_ptr<Function>&);
+    bool LaunchSanitizer(const std::shared_ptr<Function>&);
+    bool LaunchNameCorrector(const std::shared_ptr<Function>&);
 
 private:
     std::string ir_module_;

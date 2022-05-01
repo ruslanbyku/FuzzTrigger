@@ -1,7 +1,7 @@
 #include "fuzzer_generator.h"
 
 FuzzerGenerator::FuzzerGenerator(std::string function_declaration,
-                                 const std::unique_ptr<Function>& function_dump)
+                                 const std::shared_ptr<Function>& function_dump)
 : function_declaration_(std::move(function_declaration)),
 function_dump_(function_dump) {}
 

@@ -12,7 +12,7 @@ class NameCorrector : public llvm::ModulePass {
 public:
     static char ID;  // Declare for Pass internal operations
 
-    explicit NameCorrector(const std::unique_ptr<Function>&, bool&);
+    explicit NameCorrector(const std::shared_ptr<Function>&, bool&);
 
     // Explicitly specify what kind of pass has to be done on the run.
     llvm::StringRef getPassName() const override;
@@ -20,7 +20,7 @@ public:
     bool runOnModule(llvm::Module&) override;
 
 private:
-    const std::unique_ptr<Function>& function_dump_;
+    const std::shared_ptr<Function>& function_dump_;
 
     bool&                            success_;
 

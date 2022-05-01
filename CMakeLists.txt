@@ -67,8 +67,6 @@ set(SOURCES
         src/options.h
         src/llvm/generator/function_declaration.h
         src/llvm/generator/function_declaration.cc
-        src/llvm/generator/single_function_source_parser.cc
-        src/llvm/generator/single_function_source_parser.h
         src/llvm/generator/full_source_parser.cc
         src/llvm/generator/full_source_parser.h
         src/wrapper/wrapper.cc

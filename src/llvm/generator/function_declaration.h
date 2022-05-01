@@ -19,6 +19,8 @@ struct FunctionEntity {
     std::string declaration_; // There is no "\n" at the end
 };
 
+using SourceEntity = std::vector<FunctionEntity>;
+
 // Delete comments from sources (https://gist.github.com/ChunMinChang/88bfa5842396c1fbbc5b)
 // r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"', re.DOTALL | re.MULTILINE
 namespace FunctionDeclaration {

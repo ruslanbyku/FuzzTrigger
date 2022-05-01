@@ -136,30 +136,16 @@ bool SourceWrapper::LaunchRoutine() {
     }
 
     // --------------------------------------------------------------------- //
-    //   Open the source file in READ mode and load its content into memory  //
+    //   Find declarations for all standalone functions in the source file   //
     // --------------------------------------------------------------------- //
-    int32_t source_descriptor = source_file_.OpenForReadOnly();
-    if (source_descriptor == -1) {
-        // Can not open file
+    source_entity_ =
+            FindDeclarationsPerSource(
+                    source_file_.GetPath(),
+                    module_dump_->standalone_functions_);
+
+    if (source_entity_.empty()) {
+        // No declarations were found
         return false;
-    }
-
-    if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Open source file '"
-                            << source_file_.GetPath() << "' with fd = "
-                            << source_descriptor << ".";
-    }
-
-    auto source_file_size = static_cast<int32_t>(source_file_.GetSize());
-
-    if (!memory_.AllocateReadMap(source_descriptor, source_file_size)) {
-        // Can not load file into memory
-        return false;
-    }
-
-    if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Load source file content '"
-                            << source_file_.GetPath() << "' into memory.";
     }
 
     // ---------------------------------------------------------------------- //
@@ -182,24 +168,13 @@ bool SourceWrapper::LaunchRoutine() {
     }
 
     if (!CreateDirectory(result_directory_path_, override_)) {
-        if (LOGGER_ON) {
-            LOG(LOG_LEVEL_ERROR) << "Directory '"
-                                 << result_directory_path_
-                                 << "' exists.";
-        }
-
+        // Something went wrong
         return false;
-    }
-
-    if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Directory '" << result_directory_path_
-                            << "' created.";
     }
 
     // ---------------------------------------------------------------------- //
     //                            Generation Process                          //
     // ---------------------------------------------------------------------- //
-
     if (LOGGER_ON) {
         LOG(LOG_LEVEL_INFO) << "";
         LOG(LOG_LEVEL_INFO) << "Start fuzzer generation process.";
@@ -207,11 +182,10 @@ bool SourceWrapper::LaunchRoutine() {
 
     uint64_t successful_fuzzer_counter = 0;
     // Analysis is ready, module_dump has been filled
-    for (auto& function_dump: module_dump_->functions_) {
-        if (!function_dump->is_standalone_) {
-            continue;
-        }
-
+    for (const auto& function_dump: module_dump_->standalone_functions_) {
+        // ------------------------------------------------------------------ //
+        //                      Prepare for generation                        //
+        // ------------------------------------------------------------------ //
         if (LOGGER_ON) {
             LOG(LOG_LEVEL_INFO) << "Generate fuzzer for '"
                                 << function_dump->name_ << "'.";
@@ -233,8 +207,38 @@ bool SourceWrapper::LaunchRoutine() {
         }
 
         // ------------------------------------------------------------------ //
+        //                      Get function declaration                      //
+        // ------------------------------------------------------------------ //
+        // If a standalone function has no declaration, it will be impossible
+        // to create a fuzzer
+        if (LOGGER_ON) {
+            LOG(LOG_LEVEL_INFO) << "Find declaration for '"
+                                << function_dump->name_ << "'.";
+        }
+
+        std::string function_declaration(GetDeclaration(function_dump->name_));
+
+        if (function_declaration.empty()) {
+            if (LOGGER_ON) {
+                LOG(LOG_LEVEL_INFO) << "No declaration for '"
+                                    << function_dump->name_
+                                    << "' was found.";
+            }
+
+            continue;
+        }
+
+        if (LOGGER_ON) {
+            LOG(LOG_LEVEL_INFO) << "Declaration for '"
+                                << function_dump->name_ << "' was found.";
+        }
+
+        // ------------------------------------------------------------------ //
         //        Create a directory to store data about the function         //
         // ------------------------------------------------------------------ //
+        LOG(LOG_LEVEL_INFO) << "Create a directory to store results about '"
+                            << function_dump->name_ << "'.";
+
         std::string function_directory_path;
 
         function_directory_path =
@@ -250,40 +254,28 @@ bool SourceWrapper::LaunchRoutine() {
         }
 
         if (!CreateDirectory(function_directory_path, override_)) {
-            // An error occurred while creating a function directory, but
-            // this error does not impede the further program execution, so
-            // leave it.
-            if (LOGGER_ON) {
-                LOG(LOG_LEVEL_WARNING) << "Directory '"
-                                       << function_directory_path
-                                       << "' exists.";
-            }
-
-            continue;
-        }
-
-        if (LOGGER_ON) {
-            LOG(LOG_LEVEL_INFO) << "Directory '" << function_directory_path
-                                << "' created.";
+            // Something went wrong
+            return false;
         }
 
         // ------------------------------------------------------------------ //
         //                         Start generation                           //
         // ------------------------------------------------------------------ //
-        if (!PerformGeneration(function_directory_path, function_dump)) {
+        if (!PerformGeneration(function_directory_path,
+                               function_dump,
+                               function_declaration)) {
             // 1) Something bad has happened
             // 2) No error occurred, just could not continue to
             // generate a fuzzer
 
             // In case fuzzer generation process aborts at some point further,
             // delete its directory
-            File function_directory(function_directory_path);
-
             if (LOGGER_ON) {
                 LOG(LOG_LEVEL_INFO) << "Delete '"
                                     << function_directory_path << "'.";
             }
 
+            File function_directory(function_directory_path);
             function_directory.Delete();
 
             continue;
@@ -303,21 +295,6 @@ bool SourceWrapper::LaunchRoutine() {
                                 << " fuzzers generated.";
         }
     }
-
-    // --------------------------------------------------------------------- //
-    //         Unload the source from memory and close the file              //
-    // --------------------------------------------------------------------- //
-    if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Unload '" << source_file_.GetPath()
-                            << "' from memory.";
-        LOG(LOG_LEVEL_INFO) << "Close fd = " << source_descriptor << ".";
-    }
-
-    // Explicitly unload the file from memory (the destructor will get
-    // it anyway)
-    memory_.Unmap();
-    // Close the file descriptor (the destructor will NOT get it)
-    source_file_.Close();
 
     return true;
 }
@@ -340,7 +317,33 @@ bool SourceWrapper::PerformAnalysis() {
 
 bool SourceWrapper::PerformGeneration(
                           std::string function_directory_path,
-                          const std::unique_ptr<Function>& function_dump) {
+                          const std::shared_ptr<Function>& function_dump,
+                          std::string function_declaration) {
+    // --------------------------------------------------------------------- //
+    //                       Generate fuzzer stub code                       //
+    // --------------------------------------------------------------------- //
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Generate fuzzer stub data for '"
+                            << function_dump->name_ << "'.";
+    }
+
+    std::string fuzzer_content;
+    FuzzerGenerator fuzzer_generator(function_declaration, function_dump);
+    fuzzer_generator.Generate();
+    fuzzer_content = fuzzer_generator.GetFuzzer();
+
+    if (fuzzer_content.empty()) {
+        LOG(LOG_LEVEL_WARNING) << "Fuzzer stub data for '"
+                               << function_dump->name_
+                               << "' has not been generated.";
+        return false;
+    }
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Fuzzer stub data for '" << function_dump->name_
+                            << "' has been generated.";
+    }
+
     // --------------------------------------------------------------------- //
     //             Create a separate IR file for the function                //
     // --------------------------------------------------------------------- //
@@ -378,71 +381,6 @@ bool SourceWrapper::PerformGeneration(
     if (LOGGER_ON) {
         LOG(LOG_LEVEL_INFO) << "File '" << ir_function_path
                                        << "' has been sanitized.";
-    }
-
-    // --------------------------------------------------------------------- //
-    //            Find function declaration in the source file               //
-    // --------------------------------------------------------------------- //
-    if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Find declaration for '"
-                            << function_dump->name_ << "' in '"
-                            << source_file_.GetPath() << "'.";
-    }
-
-    FunctionEntity function_entity(function_dump->name_);
-    if (!source_file_) {
-        // The source file is not open
-        return false;
-    }
-
-    if (!memory_) {
-        // The file content is not loaded into memory
-        return false;
-    }
-
-    // Get file content
-    std::string source_content = memory_.GetMapping();
-
-    clang::tooling::runToolOnCode(
-            std::make_unique<SingleFunctionSourceParser>(function_entity),
-            source_content
-            );
-
-    if (function_entity.declaration_.empty()) {
-        // Function declaration was not set
-        return false;
-    }
-
-    std::string function_declaration(function_entity.declaration_);
-
-    if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Declaration for '"
-                            << function_dump->name_ << "' is found.";
-    }
-
-    // --------------------------------------------------------------------- //
-    //                       Generate fuzzer stub code                       //
-    // --------------------------------------------------------------------- //
-    if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Generate fuzzer stub data for '"
-                            << function_dump->name_ << "'.";
-    }
-
-    std::string fuzzer_content;
-    FuzzerGenerator fuzzer_generator(function_declaration, function_dump);
-    fuzzer_generator.Generate();
-    fuzzer_content = fuzzer_generator.GetFuzzer();
-
-    if (fuzzer_content.empty()) {
-        LOG(LOG_LEVEL_WARNING) << "Fuzzer stub data for '"
-                               << function_dump->name_
-                               << "' has not been generated.";
-        return false;
-    }
-
-    if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Fuzzer stub data for '" << function_dump->name_
-                            << "' has been generated.";
     }
 
     // --------------------------------------------------------------------- //
@@ -555,4 +493,24 @@ bool SourceWrapper::PerformGeneration(
     }
 
     return true;
+}
+
+std::string SourceWrapper::GetDeclaration(
+                                 const std::string& function_name) const {
+    std::string function_declaration;
+
+    for (const auto& function_entity: source_entity_) {
+        if (function_entity.name_ == function_name) {
+
+            //
+            // Found our target function
+            //
+
+            function_declaration = function_entity.declaration_;
+
+            return function_declaration;
+        }
+    }
+
+    return function_declaration;
 }

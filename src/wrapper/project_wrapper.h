@@ -1,7 +1,6 @@
 #ifndef AUTOFUZZ_PROJECT_WRAPPER_H
 #define AUTOFUZZ_PROJECT_WRAPPER_H
 
-#include "full_source_parser.h"
 #include "wrapper.h"
 
 #include <fstream>
@@ -48,7 +47,10 @@ private:
 
     bool PerformAnalysis() override;
     bool PerformGeneration(std::string,
-                           const std::unique_ptr<Function>&) override;
+                           const std::shared_ptr<Function>&,
+                           std::string) override;
+
+    std::string GetDeclaration(const std::string&) const override;
 };
 
 

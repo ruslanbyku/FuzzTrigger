@@ -70,9 +70,9 @@ private:
                                   const llvm::Function* = nullptr,
                                   uint32_t = 0);
 
-    std::vector<std::unique_ptr<Function>>
+    std::vector<std::shared_ptr<Function>>
                         DumpModuleFunctions(const std::vector<FunctionCFGPtr>&);
-    std::unique_ptr<Function> DumpSingleFunction(const llvm::Function&);
+    std::shared_ptr<Function> DumpSingleFunction(const llvm::Function&);
 
     std::vector<std::unique_ptr<Argument>>
                         DumpFunctionArguments(const llvm::Function&,

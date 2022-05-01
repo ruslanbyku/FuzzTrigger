@@ -173,7 +173,7 @@ void Analysis::DumpModule(llvm::Module& module) {
     //                     Dig into module's functions                        //
     // ---------------------------------------------------------------------- //
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Traverse module functions.";
+        LOG(LOG_LEVEL_INFO) << "Dump module functions.";
     }
 
     // Dump local functions
@@ -192,9 +192,33 @@ void Analysis::DumpModule(llvm::Module& module) {
         return;
     }
 
-    uint64_t internal_functions_number = module_dump_->functions_.size();
+    // Create a separate storage dump for just only standalone functions
+    for (auto& function_dump: module_dump_->functions_) {
+        if (!function_dump->is_standalone_) {
+            continue;
+        }
+
+        module_dump_->standalone_functions_.push_back(function_dump);
+    }
+
+    uint64_t standalone_functions_found =
+            module_dump_->standalone_funcs_number_;
+    uint64_t standalone_functions_in_storage =
+            module_dump_->standalone_functions_.size();
+
+    if (standalone_functions_found != standalone_functions_in_storage) {
+        // Something went wrong
+        //
+        // The number of found standalone functions does not match with the
+        // number of dumps of standalone function
+        module_dump_->success_ = false;
+
+        return;
+    }
 
     if (LOGGER_ON) {
+        uint64_t internal_functions_number = module_dump_->functions_.size();
+
         LOG(LOG_LEVEL_INFO) << internal_functions_number
                             << "/"
                             << module_dump_->functions_number_
@@ -646,10 +670,10 @@ bool Analysis::IsStandalone(const llvm::Function& function) {
     return standalone_functions_.contains(&function);
 }
 
-std::vector<std::unique_ptr<Function>>
+std::vector<std::shared_ptr<Function>>
                Analysis::DumpModuleFunctions(
                        const std::vector<FunctionCFGPtr>& module_cfg) {
-    std::vector<std::unique_ptr<Function>> module_functions;
+    std::vector<std::shared_ptr<Function>> module_functions;
     std::set<const llvm::Function*>        registered_functions;
 
     // Iterate over all adjacency lists of functions
@@ -672,7 +696,7 @@ std::vector<std::unique_ptr<Function>>
         // ------------------------------------------------------------------ //
         // Iterate over module's local functions and dump them
         for (const auto& pair: func_adjacency_list) {
-            // Extract a function from the adjacency list
+            // Extract a function from the adjacency list ([u], v)
             auto vertex =
                          static_cast<Vertex<llvm::Function>*>(pair.first.get());
             const llvm::Function& function = *vertex->object_;
@@ -686,21 +710,21 @@ std::vector<std::unique_ptr<Function>>
             registered_functions.insert(&function);
 
             // Start the analysis process of a function
-            std::unique_ptr<Function> function_dump =
+            std::shared_ptr<Function> function_dump =
                                                    DumpSingleFunction(function);
 
             // Append the dumped function to the vector of module functions
-            module_functions.push_back(std::move(function_dump));
+            module_functions.push_back(function_dump);
         }
     }
 
     return module_functions;
 }
 
-std::unique_ptr<Function>
+std::shared_ptr<Function>
         Analysis::DumpSingleFunction(const llvm::Function& function) {
     llvm::Type* return_type;
-    std::unique_ptr<Function> function_dump = std::make_unique<Function>();
+    std::shared_ptr<Function> function_dump = std::make_shared<Function>();
 
     // ---------------------------------------------------------------------- //
     //                     Dump general function data                         //

@@ -2,7 +2,7 @@
 
 char NameCorrector::ID = 0;
 
-NameCorrector::NameCorrector(const std::unique_ptr<Function>& function_dump,
+NameCorrector::NameCorrector(const std::shared_ptr<Function>& function_dump,
                              bool& status)
 : llvm::ModulePass(ID), function_dump_(function_dump), success_(status) {}
 

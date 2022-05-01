@@ -2,7 +2,7 @@
 
 char Sanitizer::ID = 0;
 
-Sanitizer::Sanitizer(const std::unique_ptr<Function>& function_dump,
+Sanitizer::Sanitizer(const std::shared_ptr<Function>& function_dump,
                      bool& status, bool deep)
 : llvm::ModulePass(ID), function_dump_(function_dump),
 target_function_(nullptr), success_(status), deep_(deep) {}

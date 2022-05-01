@@ -222,6 +222,7 @@ bool File::ReplaceExtension(const std::string& extension) noexcept {
     return false;
 }
 
+//TODO: handle like CreateDirectory
 bool File::Copy(const std::string& new_path, bool override) const noexcept {
     if (!path_.empty()) {
         std::error_code error_code;
@@ -292,19 +293,24 @@ int32_t File::Open(int32_t flags, uint32_t mode) {
     return file_descriptor;
 }
 
-// If a directory does not exist -> create
-// If a directory exists         -> do nothing
+// true  - A directory was created/was not created (exists)
+// false - Something went wrong
 bool File::CreateDirectory() const noexcept {
     if (!path_.empty()) {
         std::error_code error_code;
         // Create all parent directories that do not exist
-        bool result = std::filesystem::create_directories(path_, error_code);
+        //
+        // If a directory does not exist -> create
+        // If a directory exists         -> do nothing
+        std::filesystem::create_directories(path_, error_code);
 
-        if (!static_cast<bool>(error_code)) { // Success
-            return result;
+        if (!static_cast<bool>(error_code)) {
+            // No errors, success
+            return true;
         }
     }
 
+    // Errors, failure
     return false;
 }
 

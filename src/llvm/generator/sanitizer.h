@@ -16,7 +16,7 @@ class Sanitizer : public llvm::ModulePass {
 public:
     static char ID;  // Declare for Pass internal operations
 
-    explicit Sanitizer(const std::unique_ptr<Function>&,
+    explicit Sanitizer(const std::shared_ptr<Function>&,
                                                        bool&, bool deep = true);
 
     // Explicitly specify what kind of pass has to be done on the run.
@@ -25,7 +25,7 @@ public:
     bool runOnModule(llvm::Module&) override;
 
 private:
-    const std::unique_ptr<Function>& function_dump_;
+    const std::shared_ptr<Function>& function_dump_;
     llvm::Function*                  target_function_;
 
     bool&                            success_;

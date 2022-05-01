@@ -1,7 +1,6 @@
 #ifndef AUTOFUZZ_SOURCE_WRAPPER_H
 #define AUTOFUZZ_SOURCE_WRAPPER_H
 
-#include "single_function_source_parser.h"
 #include "wrapper.h"
 
 class SourceWrapper : public Wrapper {
@@ -25,12 +24,12 @@ private:
     std::string             result_directory_path_;
     std::unique_ptr<Module> module_dump_;
 
-    VirtualMapper           memory_;
-
     // Additional modes
     bool                    auto_deletion_;
     bool                    random_on_;
     bool                    override_;
+
+    SourceEntity            source_entity_;
 
     // Heed this:
     // The method is called in the constructor of the current class, so it can
@@ -45,7 +44,10 @@ private:
 
     bool PerformAnalysis() override;
     bool PerformGeneration(std::string,
-                           const std::unique_ptr<Function>&) override;
+                           const std::shared_ptr<Function>&,
+                           std::string) override;
+
+    std::string GetDeclaration(const std::string&) const override;
 };
 
 #endif //AUTOFUZZ_SOURCE_WRAPPER_H

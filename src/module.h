@@ -12,6 +12,8 @@ enum FunctionLinkage {
 struct Function;
 struct Argument;
 
+using StandaloneFunctions = std::vector<std::shared_ptr<Function>>;
+
 struct Module {
     explicit Module();
     ~Module()                        = default;
@@ -34,7 +36,9 @@ struct Module {
     uint64_t                                 functions_number_;
     uint64_t                                 standalone_funcs_number_;
     // Registered only internal functions (external are discarded in process)
-    std::vector<std::unique_ptr<Function>>   functions_;
+    std::vector<std::shared_ptr<Function>>   functions_;
+    // Only standalone functions
+    StandaloneFunctions                      standalone_functions_;
 };
 
 struct Function {

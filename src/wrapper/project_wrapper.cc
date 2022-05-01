@@ -181,45 +181,59 @@ bool ProjectWrapper::LaunchRoutine() {
     }
 
     // ---------------------------------------------------------------------- //
-    //           Find all function declarations in every source file          //
+    //   Find declarations for all standalone functions in every source file  //
     // ---------------------------------------------------------------------- //
+    //TODO: In some files function declarations are in macros. The built-in
+    //      preprocessor just hides all the unnecessary macros, thereby
+    //      deletes definitions for some standalone functions. For now I do
+    //      know how to turn this conduct off.
+    //      Example: in 'curl-7.81.0/lib/http2.c' the function
+    //      'drained_transfer' is not seen.
+
+    uint64_t all_declarations = 0;
+
     for (const std::string& source_path: source_paths_) {
-        SourceEntity source_entity;
 
-        // Open the file
-        File source_file(source_path);
-        int32_t source_descriptor = source_file.OpenForReadOnly();
-        if (source_descriptor == -1) {
-            // Can not open file
-            return false;
+        //if (source_path != "/home/chinesegranny/CLionProjects/AutoFuzz/test/fuzzing/libcurl/curl-7.81.0/lib/http2.c") {
+        //    continue;
+        //}
+
+        // If all declarations were found, stop the search
+        if (all_declarations == module_dump_->standalone_funcs_number_) {
+            break;
         }
 
-        auto source_file_size = static_cast<int32_t>(source_file.GetSize());
+        SourceEntity source_entity =
+                FindDeclarationsPerSource(source_path,
+                                         module_dump_->standalone_functions_);
 
-        // Load file into memory
-        VirtualMapper memory;
-        if (!memory.AllocateReadMap(source_descriptor, source_file_size)) {
-            // Can not load file into memory
-            return false;
+        uint64_t found_declarations = source_entity.size();
+
+        if (found_declarations > 0) {
+            // Save function declarations
+            function_declarations_[source_path] = std::move(source_entity);
+
+            // There is no function overloading in C, so it is impossible to
+            // encounter a declaration more than twice (but who knows)
+            all_declarations += found_declarations;
         }
-
-        // Get file content
-        std::string source_content = memory.GetMapping();
-
-        // Find all function declaration for a single source file
-        clang::tooling::runToolOnCode(
-                std::make_unique<FullSourceParser>(source_entity),
-                source_content);
-
-        // Save function declarations
-        function_declarations_[source_path] = source_entity;
-
-        // Explicitly unload the file from memory (the destructor will get
-        // it anyway)
-        memory.Unmap();
-        // Close the file descriptor (the destructor will NOT get it)
-        source_file.Close();
     }
+
+    /*
+    for (const auto& function: module_dump_->standalone_functions_) {
+        printf("\t[%s] -> ", function->name_.c_str());
+        for (const auto& pair: function_declarations_) {
+            //printf("%s\n", pair.first.c_str());
+            SourceEntity source_entity = pair.second;
+
+            for (const auto& function_entity: source_entity) {
+                if (function->name_ == function_entity.name_) {
+                    printf("[%s]\n", function_entity.declaration_.c_str());
+                }
+            }
+        }
+    }
+     */
 
     // ---------------------------------------------------------------------- //
     //           Create a global directory to store program results           //
@@ -241,30 +255,24 @@ bool ProjectWrapper::LaunchRoutine() {
     }
 
     if (!CreateDirectory(result_directory_path_, override_)) {
-        if (LOGGER_ON) {
-            LOG(LOG_LEVEL_ERROR) << "Directory '"
-                                 << result_directory_path_
-                                 << "' exists.";
-        }
-
+        // Something went wrong
         return false;
-    }
-
-    if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Directory '" << result_directory_path_
-                            << "' created.";
     }
 
     // ---------------------------------------------------------------------- //
     //                            Generation Process                          //
     // ---------------------------------------------------------------------- //
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "";
+        LOG(LOG_LEVEL_INFO) << "Start fuzzer generation process.";
+    }
+
     uint64_t successful_fuzzer_counter = 0;
     // Analysis is ready, module_dump has been filled
-    for (auto& function_dump: module_dump_->functions_) {
-        if (!function_dump->is_standalone_) {
-            continue;
-        }
-
+    for (const auto& function_dump: module_dump_->standalone_functions_) {
+        // ------------------------------------------------------------------ //
+        //                      Prepare for generation                        //
+        // ------------------------------------------------------------------ //
         if (LOGGER_ON) {
             LOG(LOG_LEVEL_INFO) << "Generate fuzzer for '"
                                 << function_dump->name_ << "'.";
@@ -286,6 +294,33 @@ bool ProjectWrapper::LaunchRoutine() {
         }
 
         // ------------------------------------------------------------------ //
+        //                     Find function declaration                      //
+        // ------------------------------------------------------------------ //
+        // If a standalone function has no declaration, it will be impossible
+        // to create a fuzzer
+        if (LOGGER_ON) {
+            LOG(LOG_LEVEL_INFO) << "Find declaration for '"
+                                << function_dump->name_ << "'.";
+        }
+
+        std::string function_declaration(GetDeclaration(function_dump->name_));
+
+        if (function_declaration.empty()) {
+            if (LOGGER_ON) {
+                LOG(LOG_LEVEL_INFO) << "No declaration for '"
+                                    << function_dump->name_
+                                    << "' was found.";
+            }
+
+            continue;
+        }
+
+        if (LOGGER_ON) {
+            LOG(LOG_LEVEL_INFO) << "Declaration for '"
+                                << function_dump->name_ << "' was found.";
+        }
+
+        // ------------------------------------------------------------------ //
         //        Create a directory to store data about the function         //
         // ------------------------------------------------------------------ //
         std::string function_directory_path;
@@ -303,40 +338,28 @@ bool ProjectWrapper::LaunchRoutine() {
         }
 
         if (!CreateDirectory(function_directory_path, override_)) {
-            // An error occurred while creating a function directory, but
-            // this error does not impede the further program execution, so
-            // leave it.
-            if (LOGGER_ON) {
-                LOG(LOG_LEVEL_WARNING) << "Directory '"
-                                       << function_directory_path
-                                       << "' exists.";
-            }
-
-            continue;
-        }
-
-        if (LOGGER_ON) {
-            LOG(LOG_LEVEL_INFO) << "Directory '" << function_directory_path
-                                << "' created.";
+            // Something went wrong
+            return false;
         }
 
         // ------------------------------------------------------------------ //
         //                         Start generation                           //
         // ------------------------------------------------------------------ //
-        if (!PerformGeneration(function_directory_path, function_dump)) {
+        if (!PerformGeneration(function_directory_path,
+                               function_dump,
+                               function_declaration)) {
             // 1) Something bad has happened
             // 2) No error occurred, just could not continue to
             // generate a fuzzer
 
             // In case fuzzer generation process aborts at some point further,
             // delete its directory
-            File function_directory(function_directory_path);
-
             if (LOGGER_ON) {
                 LOG(LOG_LEVEL_INFO) << "Delete '"
                                     << function_directory_path << "'.";
             }
 
+            File function_directory(function_directory_path);
             function_directory.Delete();
 
             continue;
@@ -378,7 +401,33 @@ bool ProjectWrapper::PerformAnalysis() {
 
 bool ProjectWrapper::PerformGeneration(
                            std::string function_directory_path,
-                           const std::unique_ptr<Function>& function_dump) {
+                           const std::shared_ptr<Function>& function_dump,
+                           std::string function_declaration) {
+    // --------------------------------------------------------------------- //
+    //                       Generate fuzzer stub code                       //
+    // --------------------------------------------------------------------- //
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Generate fuzzer stub data for '"
+                            << function_dump->name_ << "'.";
+    }
+
+    std::string fuzzer_content;
+    FuzzerGenerator fuzzer_generator(function_declaration, function_dump);
+    fuzzer_generator.Generate();
+    fuzzer_content = fuzzer_generator.GetFuzzer();
+
+    if (fuzzer_content.empty()) {
+        LOG(LOG_LEVEL_WARNING) << "Fuzzer stub data for '"
+                               << function_dump->name_
+                               << "' has not been generated.";
+        return false;
+    }
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Fuzzer stub data for '" << function_dump->name_
+                            << "' has been generated.";
+    }
+
     // --------------------------------------------------------------------- //
     //             Create a separate IR file for the function                //
     // --------------------------------------------------------------------- //
@@ -416,68 +465,6 @@ bool ProjectWrapper::PerformGeneration(
     if (LOGGER_ON) {
         LOG(LOG_LEVEL_INFO) << "File '" << ir_function_path
                             << "' has been sanitized.";
-    }
-
-    // --------------------------------------------------------------------- //
-    //                      Get the function declaration                     //
-    // --------------------------------------------------------------------- //
-    std::string function_declaration;
-
-    for (const auto& pair: function_declarations_) {
-        SourceEntity source_entity = pair.second;
-
-        if (source_entity.empty()) {
-            // TODO: Deal with it later
-            // No function declarations
-            continue;
-        }
-
-        for (const auto& function_entity: source_entity) {
-            if (function_entity.name_ != function_dump->name_) {
-                continue;
-            }
-
-            //
-            // Found our target function
-            //
-
-            if (function_entity.declaration_.empty()) {
-                // Function declaration was not found
-                return false;
-            }
-
-            function_declaration = function_entity.declaration_;
-        }
-    }
-
-    if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Declaration for '"
-                            << function_dump->name_ << "' is found.";
-    }
-
-    // --------------------------------------------------------------------- //
-    //                       Generate fuzzer stub code                       //
-    // --------------------------------------------------------------------- //
-    if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Generate fuzzer stub data for '"
-                            << function_dump->name_ << "'.";
-    }
-
-    std::string fuzzer_content;
-    FuzzerGenerator fuzzer_generator(function_declaration, function_dump);
-    fuzzer_generator.Generate();
-    fuzzer_content = fuzzer_generator.GetFuzzer();
-
-    if (fuzzer_content.empty()) {
-        LOG(LOG_LEVEL_WARNING) << "Fuzzer stub data for '"
-                               << function_dump->name_
-                               << "' has not been generated.";
-        return false;
-    }
-
-    if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Fuzzer stub data for '" << function_dump->name_
-                            << "' has been generated.";
     }
 
     // --------------------------------------------------------------------- //
@@ -590,4 +577,28 @@ bool ProjectWrapper::PerformGeneration(
     }
 
     return true;
+}
+
+std::string ProjectWrapper::GetDeclaration(
+                                  const std::string& function_name) const {
+    std::string function_declaration;
+
+    for (const auto& pair: function_declarations_) {
+        SourceEntity source_entity = pair.second;
+
+        for (const auto& function_entity: source_entity) {
+            if (function_entity.name_ == function_name) {
+
+                //
+                // Found our target function
+                //
+
+                function_declaration = function_entity.declaration_;
+
+                return function_declaration;
+            }
+        }
+    }
+
+    return function_declaration;
 }
