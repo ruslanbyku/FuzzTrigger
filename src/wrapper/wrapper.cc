@@ -199,10 +199,10 @@ SourceEntity Wrapper::FindDeclarationsPerSource(
 
     // Launch source parser
     clang::tooling::runToolOnCode(
-            std::make_unique<FullSourceParser>(
-                    standalone_functions,
-                    source_entity),
-            source_content);
+                       std::make_unique<FullSourceParser>(
+                               standalone_functions,
+                               source_entity),
+                       source_content);
 
     if (LOGGER_ON) {
         uint64_t found_declarations = source_entity.size();

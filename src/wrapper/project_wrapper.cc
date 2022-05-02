@@ -183,20 +183,22 @@ bool ProjectWrapper::LaunchRoutine() {
     // ---------------------------------------------------------------------- //
     //   Find declarations for all standalone functions in every source file  //
     // ---------------------------------------------------------------------- //
-    //TODO: In some files function declarations are in macros. The built-in
-    //      preprocessor just hides all the unnecessary macros, thereby
-    //      deletes definitions for some standalone functions. For now I do
-    //      know how to turn this conduct off.
+    //TODO: In some files function declarations are in macros definitions.
+    //      The built-in preprocessor just hides all the unnecessary macros,
+    //      thereby deletes definitions for some standalone functions. For now
+    //      I do know how to turn this conduct off.
     //      Example: in 'curl-7.81.0/lib/http2.c' the function
     //      'drained_transfer' is not seen.
+    //      Also there are multiple similar functions that are hidden into
+    //      macros definitions. They are in the IR, but only the first
+    //      encountered version. On the other hand, the preprocessor only
+    //      sees the version that is appropriate to macro definition. It makes
+    //      some sort of ambiguity that prevents from proper analysis and
+    //      generation.
 
     uint64_t all_declarations = 0;
 
     for (const std::string& source_path: source_paths_) {
-
-        //if (source_path != "/home/chinesegranny/CLionProjects/AutoFuzz/test/fuzzing/libcurl/curl-7.81.0/lib/http2.c") {
-        //    continue;
-        //}
 
         // If all declarations were found, stop the search
         if (all_declarations == module_dump_->standalone_funcs_number_) {
@@ -217,6 +219,11 @@ bool ProjectWrapper::LaunchRoutine() {
             // encounter a declaration more than twice (but who knows)
             all_declarations += found_declarations;
         }
+    }
+
+    if (all_declarations == 0) {
+        // No declarations were found
+        return false;
     }
 
     /*

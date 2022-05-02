@@ -11,15 +11,14 @@ FullSourceVisitor::FullSourceVisitor(
 source_entity_(source_entity) {}
 
 bool FullSourceVisitor::VisitFunctionDecl(clang::FunctionDecl* declaration) {
-    std::string function_name = declaration->getNameAsString();
-
-    //printf("%s %s\n", IsLocal(declaration) ? "1" : "0", function_name.c_str());
 
     if (!IsLocal(declaration)) {
         // A function is not local (from header files)
         // Proceed the traversal of the AST
         return true;
     }
+
+    std::string function_name = declaration->getNameAsString();
 
     if (!IsStandalone(function_name)) {
         // Not a standalone function
@@ -108,9 +107,6 @@ std::unique_ptr<clang::ASTConsumer>
 
     // Ignore all errors/warnings during parsing of a source file
     compiler.getDiagnostics().setSuppressAllDiagnostics(true);
-
-    // Delete unnecessary information ?
-    //compiler.getPreprocessor().SetCommentRetentionState(true, true);
 
     return std::make_unique<FullSourceConsumer>(
             &compiler.getASTContext(),

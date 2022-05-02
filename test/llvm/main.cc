@@ -466,4 +466,12 @@ waitpid(pid, &status, 0);
                         llvm::outs() << "1" << p << "\n";
                     }
 
+                    //compiler.getPreprocessor().SetMacroExpansionOnlyInDirectives();
+    //compiler.getPreprocessor().PrintStats();
+    //compiler.getPreprocessor().setPreprocessToken(true);
+    //compiler.getPreprocessor().setPragmasEnabled(false);
+    //compiler.getPreprocessor().IgnorePragmas();
+    //compiler.getPreprocessor().setSkipMainFilePreamble(0, true);
+    //compiler.getPreprocessor().EndSourceFile();
+
     */
