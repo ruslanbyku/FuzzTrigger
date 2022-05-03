@@ -441,6 +441,11 @@ bool ProjectWrapper::PerformGeneration(
     PassLauncher pass_on_function_ir(ir_function_path);
 
     if (!pass_on_function_ir.LaunchOnFunction<Sanitizer>(function_dump)) {
+        if (LOGGER_ON) {
+            LOG(LOG_LEVEL_WARNING) << "Sanitization of '" << ir_function_path
+                                   << "' went unsuccessful.";
+        }
+
         return false;
     }
 

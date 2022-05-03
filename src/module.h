@@ -3,12 +3,6 @@
 
 #include "type.h"
 
-enum FunctionLinkage {
-    UNKNOWN_LINKAGE,
-    EXTERNAL_LINKAGE, // Externally visible function
-    INTERNAL_LINKAGE  // Internally visible function (static)
-};
-
 struct Function;
 struct Argument;
 
@@ -50,7 +44,6 @@ struct Function {
     Function& operator=(Function&&)      = delete;
 
     std::string                            name_;
-    FunctionLinkage                        linkage_;
     bool                                   arguments_fixed_;
     std::unique_ptr<Type>                  return_type_;
     bool                                   is_local_;

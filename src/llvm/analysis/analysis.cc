@@ -741,9 +741,6 @@ std::shared_ptr<Function>
 
     function_dump->is_standalone_    = IsStandalone(function);
 
-    function_dump->linkage_          =
-                                      GetFunctionLinkage(function.getLinkage());
-
     // All functions must be local-internal
     //function_dump->is_local_       = !function.isDeclaration();
 
@@ -760,27 +757,6 @@ std::shared_ptr<Function>
 
     return function_dump;
 }
-
-FunctionLinkage Analysis::GetFunctionLinkage(
-                           llvm::GlobalValue::LinkageTypes linkage_type) const {
-    FunctionLinkage function_linkage;
-
-    switch (linkage_type) {
-        case llvm::GlobalValue::LinkageTypes::ExternalLinkage:
-            function_linkage = EXTERNAL_LINKAGE;
-            break;
-        case llvm::GlobalValue::LinkageTypes::InternalLinkage:
-            function_linkage = INTERNAL_LINKAGE;
-            break;
-        default:
-            function_linkage = UNKNOWN_LINKAGE;
-            break;
-
-    }
-
-    return function_linkage;
-}
-
 
 std::vector<std::unique_ptr<Argument>>
                      Analysis::DumpFunctionArguments(

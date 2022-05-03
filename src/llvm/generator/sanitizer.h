@@ -12,7 +12,8 @@
 #include <llvm/IR/Operator.h>
 #include <llvm/IR/Verifier.h>
 
-using Linkage = llvm::GlobalValue::LinkageTypes;
+using Visibility = llvm::GlobalValue::VisibilityTypes;
+using Linkage    = llvm::GlobalValue::LinkageTypes;
 
 class Sanitizer : public llvm::ModulePass {
 public:

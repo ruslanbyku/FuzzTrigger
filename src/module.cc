@@ -8,7 +8,7 @@ Module::operator bool() const {
 }
 
 Function::Function()
-: linkage_(UNKNOWN_LINKAGE), arguments_fixed_(false), is_local_(true),
+: arguments_fixed_(false), is_local_(true),
 is_standalone_(false), arguments_number_(0) {}
 
 Argument::Argument() : index_(0) {}

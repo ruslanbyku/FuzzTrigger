@@ -104,9 +104,17 @@ bool Sanitizer::SanitizeModule(llvm::Module& module) {
     }
 
     // ---------------------------------------------------------------------- //
+    //                         Visibility resolution                          //
+    // ---------------------------------------------------------------------- //
+    if (!target_function_->hasDefaultVisibility()) {
+        target_function_->setVisibility(Visibility::DefaultVisibility);
+    }
+
+    // ---------------------------------------------------------------------- //
     //                          Linkage resolution                            //
     // ---------------------------------------------------------------------- //
-    if (function_dump_->linkage_ == INTERNAL_LINKAGE) {
+    if (!target_function_->hasExternalLinkage()) {
+        // Internally visible function (static)
         target_function_->setLinkage(Linkage::ExternalLinkage);
     }
 

@@ -81,8 +81,6 @@ private:
 
     std::vector<std::unique_ptr<StructType>> DumpModuleStructs(llvm::Module&);
 
-    FunctionLinkage GetFunctionLinkage(llvm::GlobalValue::LinkageTypes) const;
-
     void PrintCFG() const;
 
     // Variable type recognition
