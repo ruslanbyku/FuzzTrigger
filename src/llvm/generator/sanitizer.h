@@ -12,12 +12,13 @@
 #include <llvm/IR/Operator.h>
 #include <llvm/IR/Verifier.h>
 
+using Linkage = llvm::GlobalValue::LinkageTypes;
+
 class Sanitizer : public llvm::ModulePass {
 public:
     static char ID;  // Declare for Pass internal operations
 
-    explicit Sanitizer(const std::shared_ptr<Function>&,
-                                                       bool&, bool deep = true);
+    explicit Sanitizer(const std::shared_ptr<Function>&, bool&);
 
     // Explicitly specify what kind of pass has to be done on the run.
     llvm::StringRef getPassName() const override;
@@ -29,19 +30,11 @@ private:
     llvm::Function*                  target_function_;
 
     bool&                            success_;
-    bool                             deep_;
 
-    void SanitizeModule(llvm::Module&);
-    void FindGlobalsToDelete(llvm::Module&, std::set<llvm::GlobalVariable*>&);
-    void FindFunctionsToDelete(llvm::Module&, std::set<llvm::Function*>&);
+    bool SanitizeModule(llvm::Module&);
+    bool IsDroppable(llvm::User*);
+    bool IsMemberOfTargetFunction(const llvm::Instruction&);
 
-    bool IsNative(const llvm::GlobalVariable&);
-    bool DigIntoConstant(const llvm::ConstantExpr*);
-    bool IsFunctionMember(const llvm::Instruction&);
-
-    void ResolveLinkage();
-
-    bool IsModuleValid(llvm::Module&);
     void UpdateIRModule(llvm::Module&);
     void Debug(llvm::Module&);
 };

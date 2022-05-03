@@ -440,7 +440,7 @@ bool ProjectWrapper::PerformGeneration(
 
     PassLauncher pass_on_function_ir(ir_function_path);
 
-    if (!pass_on_function_ir.LaunchSanitizer(function_dump)) {
+    if (!pass_on_function_ir.LaunchOnFunction<Sanitizer>(function_dump)) {
         return false;
     }
 
@@ -540,7 +540,7 @@ bool ProjectWrapper::PerformGeneration(
     // Modify IR fuzzer stub file (make suitable for separate compilation)
     PassLauncher pass_on_fuzzer(ir_fuzzer_stub_file.GetPath());
 
-    if (!pass_on_fuzzer.LaunchNameCorrector(function_dump)) {
+    if (!pass_on_fuzzer.LaunchOnFunction<NameCorrector>(function_dump)) {
         return false;
     }
 

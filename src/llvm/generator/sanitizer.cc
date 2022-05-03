@@ -3,9 +3,9 @@
 char Sanitizer::ID = 0;
 
 Sanitizer::Sanitizer(const std::shared_ptr<Function>& function_dump,
-                     bool& status, bool deep)
+                     bool& operation_status)
 : llvm::ModulePass(ID), function_dump_(function_dump),
-target_function_(nullptr), success_(status), deep_(deep) {}
+target_function_(nullptr), success_(operation_status) {}
 
 llvm::StringRef Sanitizer::getPassName() const {
     return "ModuleSanitizer";
@@ -23,157 +23,129 @@ bool Sanitizer::runOnModule(llvm::Module& module) {
         }
     }
 
-    SanitizeModule(module);
+    // The target function was not found in the module
+    if (!target_function_) {
+        success_ = false;
+
+        // The module has not been modified, then return false
+        return false;
+    }
 
     // !IMPORTANT!
     // Check if the sanitization process went successful
     // Segmentation fault might interrupt the program
-    success_ = IsModuleValid(module);
+    success_ = SanitizeModule(module);
     if (!success_) {
+        // Sanitization failed
+        // The new module seems invalid after sanitization
+        //
+        // The module has not been modified yet, then return false
         return false;
     }
 
-    //Debug(module);
     UpdateIRModule(module);
+    //Debug(module);
 
+    // The module has been modified, then return true
     return true;
 }
 
-void Sanitizer::SanitizeModule(llvm::Module& module) {
-    if (deep_) {
-        std::set<llvm::GlobalVariable*> global_dumpster;
+bool Sanitizer::SanitizeModule(llvm::Module& module) {
+    // ---------------------------------------------------------------------- //
+    //                          Global sanitization                           //
+    // ---------------------------------------------------------------------- //
+    std::set<llvm::GlobalVariable*> global_garbage;
 
-        FindGlobalsToDelete(module, global_dumpster);
-        for (llvm::GlobalVariable* global: global_dumpster) {
-            global->eraseFromParent();
+    for (llvm::GlobalVariable& global: module.getGlobalList()) {
+
+        bool is_droppable = true;
+        for (llvm::User* global_user: global.users()) {
+            if (!IsDroppable(global_user)) {
+                is_droppable = false;
+                break;
+            }
+        }
+
+        if (is_droppable) {
+            global_garbage.insert(&global);
         }
     }
 
-    std::set<llvm::Function*> function_dumpster;
-    FindFunctionsToDelete(module, function_dumpster);
-    for (llvm::Function* function: function_dumpster) {
-        function->eraseFromParent();
-    }
+    // ---------------------------------------------------------------------- //
+    //                         Function sanitization                          //
+    // ---------------------------------------------------------------------- //
+    std::set<llvm::Function*> function_garbage;
 
-    ResolveLinkage();
-}
-
-// true  - An error is present
-// false - The module is okay
-bool Sanitizer::IsModuleValid(llvm::Module& module) {
-    return !llvm::verifyModule(module);
-}
-
-void Sanitizer::UpdateIRModule(llvm::Module& module) {
-    const std::string& path = module.getModuleIdentifier();
-    std::error_code error_code;
-
-    llvm::raw_fd_ostream file(path, error_code);
-    module.print(file, nullptr);
-}
-
-void Sanitizer::FindFunctionsToDelete(llvm::Module& module,
-        std::set<llvm::Function*>& function_dumpster) {
     for (llvm::Function& function: module) {
+
         if (&function == target_function_) {
             continue;
         }
 
-        bool native = false;
-        // Not local functions, marked as "declare", some might be interesting
-        if (function.isDeclaration()) {
-
-            for (const llvm::User* user: function.users()) {
-                if (const auto* instruction =
-                                      llvm::dyn_cast<llvm::Instruction>(user)) {
-                    // Get the function which the instruction belongs to
-                    const llvm::Function* parent_function =
-                            instruction->getFunction();
-                    std::string parent_name = parent_function->getName().str();
-
-                    if (parent_name == function_dump_->name_) {
-                        native = true;
-                    }
-                }
+        bool is_droppable = true;
+        for (llvm::User* function_user: function.users()) {
+            if (!IsDroppable(function_user)) {
+                is_droppable = false;
+                break;
             }
         }
 
-        // Local functions delete by default
-        if (!native) {
-            function_dumpster.insert(&function);
+        if (is_droppable) {
+            function_garbage.insert(&function);
         }
     }
+
+    for (auto* global: global_garbage) {
+        global->eraseFromParent();
+    }
+
+    for (auto* function: function_garbage) {
+        function->eraseFromParent();
+    }
+
+    // ---------------------------------------------------------------------- //
+    //                          Linkage resolution                            //
+    // ---------------------------------------------------------------------- //
+    if (function_dump_->linkage_ == INTERNAL_LINKAGE) {
+        target_function_->setLinkage(Linkage::ExternalLinkage);
+    }
+
+    // true  - An error is present
+    // false - The module is okay
+    return !llvm::verifyModule(module);
 }
 
-void Sanitizer::FindGlobalsToDelete(llvm::Module& module,
-                       std::set<llvm::GlobalVariable*>& global_dumpster) {
-    llvm::SymbolTableList<llvm::GlobalVariable>& global_list =
-                                                         module.getGlobalList();
-    std::set<const llvm::GlobalVariable*> native_globals;
+bool Sanitizer::IsDroppable(llvm::User* user) {
+    llvm::Instruction* instruction;
+    llvm::Constant*    constant;
 
-    for (llvm::GlobalVariable& global: global_list) {
-        if (IsNative(global)) {
-            native_globals.insert(&global);
-        }
+    if (llvm::isa<llvm::Instruction>(user)) {
+        instruction = llvm::cast<llvm::Instruction>(user);
+
+        return !IsMemberOfTargetFunction(*instruction);
+
     }
 
-    // Sort out native from non-native globals
-    for (llvm::GlobalVariable& global: global_list) {
-        if (!native_globals.contains(&global)) {
+    if (llvm::isa<llvm::Constant>(user)) {
+        constant = llvm::cast<llvm::Constant>(user);
 
-            global_dumpster.insert(&global);
-        }
-    }
-}
-
-bool Sanitizer::IsNative(const llvm::GlobalVariable& global) {
-    for (const llvm::User* global_user: global.users()) {
-        // Global variable is NOT a string literal
-        if (const auto* instruction =
-                               llvm::dyn_cast<llvm::Instruction>(global_user)) {
-            return IsFunctionMember(*instruction);
-        }
-
-        // Global variable is a string literal
-        if (const auto* constant_expression =
-                              llvm::dyn_cast<llvm::ConstantExpr>(global_user)) {
-            return DigIntoConstant(constant_expression);
-        }
-    }
-
-    // A global variable was not identified, do not delete lest to break some
-    // dependencies
-    return true; // true by default
-}
-
-bool Sanitizer::DigIntoConstant(const llvm::ConstantExpr* constant_expression) {
-    for (const auto* constant_expression_user: constant_expression->users()) {
-        if (const auto* instruction =
-                  llvm::dyn_cast<llvm::Instruction>(constant_expression_user)) {
-            //
-            return IsFunctionMember(*instruction);
-        //
-        } else if (auto* constant_body =
-                     llvm::dyn_cast<llvm::Constant>(constant_expression_user)) {
-            for (const llvm::User* constant_value: constant_body->users()) {
-                //
-                if (auto* global =
-                         llvm::dyn_cast<llvm::GlobalVariable>(constant_value)) {
-                    // @__const.BufferOverRead.items
-                    //
-                    return IsNative(*global);
-                }
+        for (llvm::User* constant_user: constant->users()) {
+            if (!IsDroppable(constant_user)) {
+                return false;
             }
         }
     }
 
-    // An unexpected branch
-    return true; // true by default
+    // These classes remain unaccounted
+    // llvm::DerivedUser
+    // llvm::Operator
+
+    return true;
 }
 
-bool Sanitizer::IsFunctionMember(const llvm::Instruction& instruction) {
+bool Sanitizer::IsMemberOfTargetFunction(const llvm::Instruction& instruction) {
     const llvm::Function* parent_function = instruction.getFunction();
-    std::string parent_name = parent_function->getName().str();
+    std::string parent_name               = parent_function->getName().str();
 
     if (parent_name == function_dump_->name_) {
         return true;
@@ -182,15 +154,12 @@ bool Sanitizer::IsFunctionMember(const llvm::Instruction& instruction) {
     return false;
 }
 
+void Sanitizer::UpdateIRModule(llvm::Module& module) {
+    const std::string& path = module.getModuleIdentifier();
+    std::error_code error_code;
 
-using Linkage = llvm::GlobalValue::LinkageTypes;
-
-void Sanitizer::ResolveLinkage() {
-    if (function_dump_->linkage_ != INTERNAL_LINKAGE) {
-        return;
-    }
-
-    target_function_->setLinkage(Linkage::ExternalLinkage);
+    llvm::raw_fd_ostream file(path, error_code);
+    module.print(file, nullptr);
 }
 
 void Sanitizer::Debug(llvm::Module& module) {

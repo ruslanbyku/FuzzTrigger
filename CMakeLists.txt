@@ -51,7 +51,6 @@ set(SOURCES
         src/system/virtual_mapper.h
         src/llvm/generator/sanitizer.cc
         src/llvm/generator/sanitizer.h
-        src/llvm/pass_launcher.cc
         src/llvm/generator/name_corrector.cc
         src/llvm/generator/name_corrector.h
         src/system/compiler.cc

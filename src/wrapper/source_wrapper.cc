@@ -349,13 +349,18 @@ bool SourceWrapper::PerformGeneration(
 
     PassLauncher pass_on_function_ir(ir_function_path);
 
-    if (!pass_on_function_ir.LaunchSanitizer(function_dump)) {
+    if (!pass_on_function_ir.LaunchOnFunction<Sanitizer>(function_dump)) {
+        if (LOGGER_ON) {
+            LOG(LOG_LEVEL_WARNING) << "Sanitization of '" << ir_function_path
+                                   << "' went unsuccessful.";
+        }
+
         return false;
     }
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "File '" << ir_function_path
-                            << "' has been sanitized.";
+        LOG(LOG_LEVEL_INFO) << "Sanitization of '" << ir_function_path
+                            << "' went successful.";
     }
 
     // --------------------------------------------------------------------- //
@@ -449,7 +454,7 @@ bool SourceWrapper::PerformGeneration(
     // Modify IR fuzzer stub file (make suitable for separate compilation)
     PassLauncher pass_on_fuzzer(ir_fuzzer_stub_file.GetPath());
 
-    if (!pass_on_fuzzer.LaunchNameCorrector(function_dump)) {
+    if (!pass_on_fuzzer.LaunchOnFunction<NameCorrector>(function_dump)) {
         return false;
     }
 
