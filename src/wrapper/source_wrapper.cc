@@ -320,31 +320,6 @@ bool SourceWrapper::PerformGeneration(
                           const std::shared_ptr<Function>& function_dump,
                           std::string function_declaration) {
     // --------------------------------------------------------------------- //
-    //                       Generate fuzzer stub code                       //
-    // --------------------------------------------------------------------- //
-    if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Generate fuzzer stub data for '"
-                            << function_dump->name_ << "'.";
-    }
-
-    std::string fuzzer_content;
-    FuzzerGenerator fuzzer_generator(function_declaration, function_dump);
-    fuzzer_generator.Generate();
-    fuzzer_content = fuzzer_generator.GetFuzzer();
-
-    if (fuzzer_content.empty()) {
-        LOG(LOG_LEVEL_WARNING) << "Fuzzer stub data for '"
-                               << function_dump->name_
-                               << "' has not been generated.";
-        return false;
-    }
-
-    if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "Fuzzer stub data for '" << function_dump->name_
-                            << "' has been generated.";
-    }
-
-    // --------------------------------------------------------------------- //
     //             Create a separate IR file for the function                //
     // --------------------------------------------------------------------- //
     std::string ir_function_path;
@@ -380,7 +355,32 @@ bool SourceWrapper::PerformGeneration(
 
     if (LOGGER_ON) {
         LOG(LOG_LEVEL_INFO) << "File '" << ir_function_path
-                                       << "' has been sanitized.";
+                            << "' has been sanitized.";
+    }
+
+    // --------------------------------------------------------------------- //
+    //                       Generate fuzzer stub code                       //
+    // --------------------------------------------------------------------- //
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Generate fuzzer stub data for '"
+                            << function_dump->name_ << "'.";
+    }
+
+    std::string fuzzer_content;
+    FuzzerGenerator fuzzer_generator(function_declaration, function_dump);
+    fuzzer_generator.Generate();
+    fuzzer_content = fuzzer_generator.GetFuzzer();
+
+    if (fuzzer_content.empty()) {
+        LOG(LOG_LEVEL_WARNING) << "Fuzzer stub data for '"
+                               << function_dump->name_
+                               << "' has not been generated.";
+        return false;
+    }
+
+    if (LOGGER_ON) {
+        LOG(LOG_LEVEL_INFO) << "Fuzzer stub data for '" << function_dump->name_
+                            << "' has been generated.";
     }
 
     // --------------------------------------------------------------------- //

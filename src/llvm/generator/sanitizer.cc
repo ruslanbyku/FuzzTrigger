@@ -40,8 +40,6 @@ bool Sanitizer::runOnModule(llvm::Module& module) {
 }
 
 void Sanitizer::SanitizeModule(llvm::Module& module) {
-    std::set<llvm::Function*>       function_dumpster;
-
     if (deep_) {
         std::set<llvm::GlobalVariable*> global_dumpster;
 
@@ -51,6 +49,7 @@ void Sanitizer::SanitizeModule(llvm::Module& module) {
         }
     }
 
+    std::set<llvm::Function*> function_dumpster;
     FindFunctionsToDelete(module, function_dumpster);
     for (llvm::Function* function: function_dumpster) {
         function->eraseFromParent();

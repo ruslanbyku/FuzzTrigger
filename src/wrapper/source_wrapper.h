@@ -6,7 +6,7 @@
 class SourceWrapper : public Wrapper {
 public:
     explicit SourceWrapper(std::string,
-                           bool auto_deletion = true,
+                           bool auto_deletion = false,
                            bool random_on = false,
                            bool override = true) noexcept(false);
     ~SourceWrapper() override;

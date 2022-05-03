@@ -10,6 +10,7 @@ llvm::StringRef NameCorrector::getPassName() const {
     return "FunctionNameCorrector";
 }
 
+// dropLLVMManglingEscape
 bool NameCorrector::runOnModule(llvm::Module& module) {
     llvm::Function* target_function   = nullptr;
     std::string     original_function(function_dump_->name_);
