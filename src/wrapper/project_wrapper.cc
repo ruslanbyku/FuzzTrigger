@@ -450,9 +450,11 @@ bool ProjectWrapper::PerformGeneration(
     }
 
     if (LOGGER_ON) {
-        LOG(LOG_LEVEL_INFO) << "File '" << ir_function_path
-                            << "' has been sanitized.";
+        LOG(LOG_LEVEL_INFO) << "Sanitization of '" << ir_function_path
+                               << "' went successful.";
     }
+
+    return true;
 
     // --------------------------------------------------------------------- //
     //                       Generate fuzzer stub code                       //

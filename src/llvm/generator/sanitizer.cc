@@ -52,7 +52,7 @@ bool Sanitizer::runOnModule(llvm::Module& module) {
 
 bool Sanitizer::SanitizeModule(llvm::Module& module) {
     // ---------------------------------------------------------------------- //
-    //                          Global sanitization                           //
+    //                      Search non-dependant globals                      //
     // ---------------------------------------------------------------------- //
     std::set<llvm::GlobalVariable*> global_garbage;
 
@@ -72,7 +72,7 @@ bool Sanitizer::SanitizeModule(llvm::Module& module) {
     }
 
     // ---------------------------------------------------------------------- //
-    //                         Function sanitization                          //
+    //                     Search non-dependant functions                     //
     // ---------------------------------------------------------------------- //
     std::set<llvm::Function*> function_garbage;
 
@@ -95,23 +95,28 @@ bool Sanitizer::SanitizeModule(llvm::Module& module) {
         }
     }
 
+    // ---------------------------------------------------------------------- //
+    //                            Sanitize module                             //
+    // ---------------------------------------------------------------------- //
     for (auto* global: global_garbage) {
-        global->eraseFromParent();
+        global->dropAllReferences();
+        global->removeFromParent();
     }
 
     for (auto* function: function_garbage) {
-        function->eraseFromParent();
+        function->dropAllReferences();
+        function->removeFromParent();
     }
 
     // ---------------------------------------------------------------------- //
-    //                         Visibility resolution                          //
+    //                 Target function visibility resolution                  //
     // ---------------------------------------------------------------------- //
     if (!target_function_->hasDefaultVisibility()) {
         target_function_->setVisibility(Visibility::DefaultVisibility);
     }
 
     // ---------------------------------------------------------------------- //
-    //                          Linkage resolution                            //
+    //                  Target function linkage resolution                    //
     // ---------------------------------------------------------------------- //
     if (!target_function_->hasExternalLinkage()) {
         // Internally visible function (static)
