@@ -23,8 +23,8 @@ bool Sanitizer::runOnModule(llvm::Module& module) {
         }
     }
 
-    // The target function was not found in the module
     if (!target_function_) {
+        // The target function was not found in the module
         success_ = false;
 
         // The module has not been modified, then return false
@@ -37,7 +37,7 @@ bool Sanitizer::runOnModule(llvm::Module& module) {
     success_ = SanitizeModule(module);
     if (!success_) {
         // Sanitization failed
-        // The new module seems invalid after sanitization
+        // A new module seems invalid after sanitization
         //
         // The module has not been modified yet, then return false
         return false;
@@ -136,14 +136,23 @@ bool Sanitizer::IsDroppable(llvm::User* user) {
         instruction = llvm::cast<llvm::Instruction>(user);
 
         return !IsMemberOfTargetFunction(*instruction);
-
     }
 
     if (llvm::isa<llvm::Constant>(user)) {
         constant = llvm::cast<llvm::Constant>(user);
 
+        if (visited_constants_.contains(constant)) {
+            // Already encountered a constant, no need to proceed, return the
+            // result
+            return visited_constants_[constant];
+        }
+
         for (llvm::User* constant_user: constant->users()) {
-            if (!IsDroppable(constant_user)) {
+            bool is_droppable            = IsDroppable(constant_user);
+            visited_constants_[constant] = is_droppable;
+
+            if (!is_droppable) {
+                // A constant must be preserved
                 return false;
             }
         }

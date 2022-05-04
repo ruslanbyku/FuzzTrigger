@@ -3,6 +3,8 @@
 
 #include "module.h"
 
+#include <map>
+
 #include <llvm/Pass.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Constants.h>
@@ -31,6 +33,8 @@ private:
     llvm::Function*                  target_function_;
 
     bool&                            success_;
+
+    std::map<llvm::Constant*, bool>  visited_constants_;
 
     bool SanitizeModule(llvm::Module&);
     bool IsDroppable(llvm::User*);

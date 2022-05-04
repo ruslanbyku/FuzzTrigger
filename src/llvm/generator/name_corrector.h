@@ -24,7 +24,8 @@ private:
 
     bool&                            success_;
 
-    bool IsModuleValid(llvm::Module&);
+    bool DropManglingOnTargetFunction(llvm::Module&, const std::string&);
+
     void UpdateIRModule(llvm::Module&);
     void Debug(llvm::Module&);
 };

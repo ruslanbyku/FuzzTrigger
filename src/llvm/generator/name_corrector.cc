@@ -3,32 +3,55 @@
 char NameCorrector::ID = 0;
 
 NameCorrector::NameCorrector(const std::shared_ptr<Function>& function_dump,
-                             bool& status)
-: llvm::ModulePass(ID), function_dump_(function_dump), success_(status) {}
+                             bool& operation_status)
+: llvm::ModulePass(ID), function_dump_(function_dump),
+success_(operation_status) {}
 
 llvm::StringRef NameCorrector::getPassName() const {
     return "FunctionNameCorrector";
 }
 
-// dropLLVMManglingEscape
 bool NameCorrector::runOnModule(llvm::Module& module) {
+    // !IMPORTANT!
+    // Check if the name mangling process went successful
+    // Segmentation fault might interrupt the program
+    success_ = DropManglingOnTargetFunction(module, function_dump_->name_);
+    if (!success_) {
+        // Name correction failed
+        // A new module seems invalid after name correction
+        //
+        // The module has not been modified yet, then return false
+        return false;
+    }
+
+    UpdateIRModule(module);
+    //Debug(module);
+
+    // The module has been modified, then return true
+    return true;
+}
+
+bool NameCorrector::DropManglingOnTargetFunction(
+        llvm::Module& module, const std::string& original_function_name) {
     llvm::Function* target_function   = nullptr;
-    std::string     original_function(function_dump_->name_);
 
     // Find the equivalent of the original function in the module
     for (llvm::Function& function: module) {
         // Assuming there must be a declaration
         if (function.isDeclaration()) {
-            std::string function_name = function.getName().str();
+            std::string function_name(function.getName().str());
+            auto position = function_name.find(original_function_name);
 
-            if (function_name.find(original_function) != std::string::npos) {
+            // For now assuming that there is only one function that
+            // incorporates original_function_name
+            if (position != std::string::npos) {
                 target_function = &function;
             }
         }
     }
 
     if (!target_function) {
-        // // The equivalent function can not be found, abort.
+        // The target function was not found in the module
         return false;
     }
 
@@ -41,29 +64,15 @@ bool NameCorrector::runOnModule(llvm::Module& module) {
         if (auto caller = llvm::dyn_cast<llvm::CallInst>(user)) {
             llvm::Function* callee = caller->getCalledFunction();
 
-            callee->setName(original_function);
+            callee->setName(original_function_name);
         }
     }
 
     // Replace name in the declaration
-    target_function->setName(original_function);
+    target_function->setName(original_function_name);
 
-    // !IMPORTANT!
-    // Check if the name mangling process went successful
-    // Segmentation fault might interrupt the program
-    success_ = IsModuleValid(module);
-    if (!success_) {
-        return false;
-    }
-
-    UpdateIRModule(module);
-
-    return true;
-}
-
-// true  - An error is present
-// false - The module is okay
-bool NameCorrector::IsModuleValid(llvm::Module& module) {
+    // true  - An error is present
+    // false - The module is okay
     return !llvm::verifyModule(module);
 }
 
