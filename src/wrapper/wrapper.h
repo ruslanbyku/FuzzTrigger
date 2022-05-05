@@ -13,12 +13,21 @@
 
 #include <exception>
 
+struct Options {
+    bool auto_deletion_ = false;  // delete temporary files on exit
+    bool random_on_     = false;  // create unique name files/directories
+    bool override_      = true;   // override existing files
+};
+
 class Wrapper {
 public:
+    explicit Wrapper(Options);
     virtual ~Wrapper()           = default;
+
     virtual bool LaunchRoutine() = 0;
 
 protected:
+    Options           options_;
     std::vector<File> garbage_;
 
     virtual bool PerformAnalysis()                                   = 0;

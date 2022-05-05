@@ -5,10 +5,7 @@
 
 class SourceWrapper : public Wrapper {
 public:
-    explicit SourceWrapper(std::string,
-                           bool auto_deletion = false,
-                           bool random_on = false,
-                           bool override = true) noexcept(false);
+    explicit SourceWrapper(std::string, Options) noexcept(false);
     ~SourceWrapper() override;
     SourceWrapper(const SourceWrapper&)                = delete;
     SourceWrapper& operator=(const SourceWrapper&)     = delete;
@@ -23,11 +20,6 @@ private:
     std::string             working_directory_;
     std::string             result_directory_path_;
     std::unique_ptr<Module> module_dump_;
-
-    // Additional modes
-    bool                    auto_deletion_;
-    bool                    random_on_;
-    bool                    override_;
 
     SourceEntity            source_entity_;
 

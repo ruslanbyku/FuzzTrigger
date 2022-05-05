@@ -3,6 +3,11 @@
 
 #include "utils.h"
 
+#define COLOR_RESET  "\033[0m"
+#define COLOR_RED    "\033[31m"
+#define COLOR_GREEN  "\033[32m"
+#define COLOR_YELLOW "\033[33m"
+
 #define LOGGER_ON      true
 #define LOGGER_FILE_ON false  // If false, write to stdout
 
@@ -61,7 +66,20 @@ std::ostringstream& Logger<T>::Get(LogLevel level) {
         string_stream_ << timestamp << " ";
     }
 
-    string_stream_ << log_level << ": ";
+    switch (level) {
+        case LOG_LEVEL_ERROR:
+            string_stream_ << COLOR_RED;
+            break;
+        case LOG_LEVEL_INFO:
+            string_stream_ << COLOR_GREEN;
+            break;
+        case LOG_LEVEL_WARNING:
+            string_stream_ << COLOR_YELLOW;
+        default:
+            break;
+    }
+
+    string_stream_ << log_level << COLOR_RESET << ": ";
     string_stream_ << std::string(offset, ' ');
 
     return string_stream_;

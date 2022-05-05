@@ -1,19 +1,16 @@
 #include "source_wrapper.h"
 
-SourceWrapper::SourceWrapper(std::string source_file_path, bool auto_deletion,
-                             bool random_on, bool override)
-: source_file_(std::move(source_file_path)),
+SourceWrapper::SourceWrapper(std::string source_file_path, Options options)
+: Wrapper(options),
+  source_file_(std::move(source_file_path)),
   ir_source_file_(source_file_),
   working_directory_(source_file_.GetParentPath()),
-  module_dump_(std::make_unique<Module>()),
-  auto_deletion_(auto_deletion),
-  random_on_(random_on),
-  override_(override) {
+  module_dump_(std::make_unique<Module>()) {
     InitializeState();
 }
 
 SourceWrapper::~SourceWrapper() {
-    EmptyGarbage(auto_deletion_);
+    EmptyGarbage(options_.auto_deletion_);
 }
 
 void SourceWrapper::InitializeState() {
@@ -70,9 +67,12 @@ void SourceWrapper::InitializeState() {
     ir_source_file_.ReplaceExtension(ir_extension);
 
     if (LOGGER_ON) {
-        std::string random_parameter   = random_on_      ? "true" : "false";
-        std::string deletion_parameter = auto_deletion_  ? "true" : "false";
-        std::string override_parameter = override_       ? "true" : "false";
+        std::string random_parameter   =
+                              options_.random_on_      ? "true" : "false";
+        std::string deletion_parameter =
+                              options_.auto_deletion_  ? "true" : "false";
+        std::string override_parameter =
+                              options_.override_       ? "true" : "false";
 
         LOG(LOG_LEVEL_INFO) << "Additional parameters are used:";
         LOG(LOG_LEVEL_INFO) << "file name randomization = " << random_parameter;
@@ -159,7 +159,7 @@ bool SourceWrapper::LaunchRoutine() {
     result_directory_path_ = ConstructResultDirectoryPath(
                                                     working_directory_,
                                                     source_file_,
-                                                    random_on_);
+                                                    options_.random_on_);
 
     if (result_directory_path_.empty()) {
         // Can not construct a global directory path
@@ -167,7 +167,7 @@ bool SourceWrapper::LaunchRoutine() {
         return false;
     }
 
-    if (!CreateDirectory(result_directory_path_, override_)) {
+    if (!CreateDirectory(result_directory_path_, options_.override_)) {
         // Something went wrong
         return false;
     }
@@ -245,7 +245,7 @@ bool SourceWrapper::LaunchRoutine() {
                 ConstructFunctionDirectoryPath(
                         result_directory_path_,
                         function_dump->name_,
-                        random_on_);
+                        options_.random_on_);
 
         if (function_directory_path.empty()) {
             // Can not construct a function directory path
@@ -253,7 +253,7 @@ bool SourceWrapper::LaunchRoutine() {
             return false;
         }
 
-        if (!CreateDirectory(function_directory_path, override_)) {
+        if (!CreateDirectory(function_directory_path, options_.override_)) {
             // Something went wrong
             return false;
         }
@@ -327,7 +327,7 @@ bool SourceWrapper::PerformGeneration(
     ir_function_path += function_dump->name_;
     ir_function_path += ir_extension;
 
-    if (!ir_source_file_.Copy(ir_function_path, override_)) {
+    if (!ir_source_file_.Copy(ir_function_path, options_.override_)) {
         return false;
     }
 
@@ -405,7 +405,7 @@ bool SourceWrapper::PerformGeneration(
     File fuzzer_stub_file(fuzzer_stub_path);
 
     if (!WriteFuzzerContentToFile(fuzzer_stub_file,
-                                  fuzzer_content, override_)) {
+                                  fuzzer_content, options_.override_)) {
         return false;
     }
 

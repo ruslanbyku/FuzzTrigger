@@ -1,20 +1,18 @@
 #include "project_wrapper.h"
 
 ProjectWrapper::ProjectWrapper(std::string ir_project,
-                               std::string sources, bool auto_deletion,
-                               bool random_on, bool override) noexcept(false)
-: ir_project_(std::move(ir_project)),
+                               std::string sources,
+                               Options options) noexcept(false)
+: Wrapper(options),
+  ir_project_(std::move(ir_project)),
   sources_(std::move(sources)),
   working_directory_(ir_project_.GetParentPath()),
-  module_dump_(std::make_unique<Module>()),
-  auto_deletion_(auto_deletion),
-  random_on_(random_on),
-  override_(override) {
+  module_dump_(std::make_unique<Module>()) {
     InitializeState();
 }
 
 ProjectWrapper::~ProjectWrapper() {
-    EmptyGarbage(auto_deletion_);
+    EmptyGarbage(options_.auto_deletion_);
 }
 
 void ProjectWrapper::InitializeState() {
@@ -139,9 +137,12 @@ void ProjectWrapper::InitializeState() {
         //
         //
         //
-        std::string random_parameter   = random_on_      ? "true" : "false";
-        std::string deletion_parameter = auto_deletion_  ? "true" : "false";
-        std::string override_parameter = override_       ? "true" : "false";
+        std::string random_parameter   =
+                              options_.random_on_      ? "true" : "false";
+        std::string deletion_parameter =
+                              options_.auto_deletion_  ? "true" : "false";
+        std::string override_parameter =
+                              options_.override_       ? "true" : "false";
 
         LOG(LOG_LEVEL_INFO) << "Additional parameters are used:";
         LOG(LOG_LEVEL_INFO) << "file name randomization = " << random_parameter;
@@ -183,19 +184,6 @@ bool ProjectWrapper::LaunchRoutine() {
     // ---------------------------------------------------------------------- //
     //   Find declarations for all standalone functions in every source file  //
     // ---------------------------------------------------------------------- //
-    //TODO: In some files function declarations are in macros definitions.
-    //      The built-in preprocessor just hides all the unnecessary macros,
-    //      thereby deletes definitions for some standalone functions. For now
-    //      I do know how to turn this conduct off.
-    //      Example: in 'curl-7.81.0/lib/http2.c' the function
-    //      'drained_transfer' is not seen.
-    //      Also there are multiple similar functions that are hidden into
-    //      macros definitions. They are in the IR, but only the first
-    //      encountered version. On the other hand, the preprocessor only
-    //      sees the version that is appropriate to macro definition. It makes
-    //      some sort of ambiguity that prevents from proper analysis and
-    //      generation.
-
     uint64_t all_declarations = 0;
 
     for (const std::string& source_path: source_paths_) {
@@ -253,7 +241,7 @@ bool ProjectWrapper::LaunchRoutine() {
     result_directory_path_ = ConstructResultDirectoryPath(
                                                     working_directory_,
                                                     ir_project_,
-                                                    random_on_);
+                                                    options_.random_on_);
 
     if (result_directory_path_.empty()) {
         // Can not construct a global directory
@@ -261,7 +249,7 @@ bool ProjectWrapper::LaunchRoutine() {
         return false;
     }
 
-    if (!CreateDirectory(result_directory_path_, override_)) {
+    if (!CreateDirectory(result_directory_path_, options_.override_)) {
         // Something went wrong
         return false;
     }
@@ -336,7 +324,7 @@ bool ProjectWrapper::LaunchRoutine() {
                 ConstructFunctionDirectoryPath(
                         result_directory_path_,
                         function_dump->name_,
-                        random_on_);
+                        options_.random_on_);
 
         if (function_directory_path.empty()) {
             // Can not construct a function directory path
@@ -344,7 +332,7 @@ bool ProjectWrapper::LaunchRoutine() {
             return false;
         }
 
-        if (!CreateDirectory(function_directory_path, override_)) {
+        if (!CreateDirectory(function_directory_path, options_.override_)) {
             // Something went wrong
             return false;
         }
@@ -418,7 +406,7 @@ bool ProjectWrapper::PerformGeneration(
     ir_function_path += function_dump->name_;
     ir_function_path += ir_extension;
 
-    if (!ir_project_.Copy(ir_function_path, override_)) {
+    if (!ir_project_.Copy(ir_function_path, options_.override_)) {
         return false;
     }
 
@@ -498,7 +486,7 @@ bool ProjectWrapper::PerformGeneration(
     File fuzzer_stub_file(fuzzer_stub_path);
 
     if (!WriteFuzzerContentToFile(fuzzer_stub_file,
-                                  fuzzer_content, override_)) {
+                                  fuzzer_content, options_.override_)) {
         return false;
     }
 

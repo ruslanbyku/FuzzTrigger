@@ -45,6 +45,18 @@ private:
 // ------------------------------------------------------------------------- //
 //                             Frontend Action                               //
 // ------------------------------------------------------------------------- //
+//TODO: In some files function declarations are in macros definitions.
+//      The built-in preprocessor just hides all the unnecessary macros,
+//      thereby deletes definitions for some standalone functions. For now
+//      I do know how to turn this conduct off.
+//      Example: in 'curl-7.81.0/lib/http2.c' the function
+//      'drained_transfer' is not seen.
+//      Also there are multiple similar functions that are hidden into
+//      macros definitions. They are in the IR, but only the first
+//      encountered version. On the other hand, the preprocessor only
+//      sees the version that is appropriate to macro definition. It makes
+//      some sort of ambiguity that prevents from proper analysis and
+//      generation.
 class FullSourceParser : public clang::ASTFrontendAction {
 public:
     explicit FullSourceParser(const StandaloneFunctions&, SourceEntity&);

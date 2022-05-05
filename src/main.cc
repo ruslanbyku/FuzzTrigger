@@ -25,13 +25,16 @@ int main(int argc, char** argv) {
     }
 
     try {
+        Options program_options;
         std::unique_ptr<Wrapper> wrapper;
 
         // Initialize a fuzzer state
         if (sources.empty()) {
-            wrapper = std::make_unique<SourceWrapper>(target);
+            wrapper = std::make_unique<SourceWrapper>(target, program_options);
         } else {
-            wrapper = std::make_unique<ProjectWrapper>(target, sources.c_str());
+            wrapper = std::make_unique<ProjectWrapper>(target,
+                                                       sources.c_str(),
+                                                       program_options);
         }
 
         // Run the fuzzer main routine

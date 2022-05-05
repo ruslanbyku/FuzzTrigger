@@ -7,10 +7,7 @@
 
 class ProjectWrapper : public Wrapper {
 public:
-    explicit ProjectWrapper(std::string, std::string,
-                            bool auto_deletion = true,
-                            bool random_on = false,
-                            bool override = true) noexcept(false);
+    explicit ProjectWrapper(std::string, std::string, Options) noexcept(false);
     ~ProjectWrapper() override;
     ProjectWrapper(const ProjectWrapper&)                = delete;
     ProjectWrapper& operator=(const ProjectWrapper&)     = delete;
@@ -25,11 +22,6 @@ private:
     std::string                         working_directory_;
     std::string                         result_directory_path_;
     std::unique_ptr<Module>             module_dump_;
-
-    // Additional modes
-    bool                                auto_deletion_;
-    bool                                random_on_;
-    bool                                override_;
 
     std::set<std::string>               source_paths_;
     std::map<std::string, SourceEntity> function_declarations_;

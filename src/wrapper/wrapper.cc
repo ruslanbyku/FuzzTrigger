@@ -1,5 +1,7 @@
 #include "wrapper.h"
 
+Wrapper::Wrapper(Options options) : options_(options) {}
+
 std::string Wrapper::ConstructResultDirectoryPath(
         const std::string& working_directory,
         const File& source_file,
@@ -268,3 +270,4 @@ bool Wrapper::CreateDirectory(const std::string& directory_path,
 
     return true;
 }
+
