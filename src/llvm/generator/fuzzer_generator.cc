@@ -1,5 +1,59 @@
 #include "fuzzer_generator.h"
 
+namespace {
+    const std::string HEADERS = R"(#include <cstdio>
+#include <cstdint>
+#include <cstring>
+#include <random>
+)";
+
+    const std::string RANDOM_INT64 = R"(
+int64_t GenerateRandom_int64() {
+    std::random_device device;
+    std::mt19937 generator(device());
+    std::uniform_int_distribution<int64_t> distribution(INT64_MIN, INT64_MAX);
+
+    return distribution(generator);
+})";
+
+    const std::string FILL_MEMORY = R"(
+uint8_t* CreateSpace(const uint8_t* src, size_t length, size_t number) {
+    size_t index  = 0;
+    uint8_t* data = new uint8_t[number];
+
+    while (number / length > 0) {
+        memcpy(data + index, src, length);
+        index  += length;
+        number -= length;
+    }
+
+    if (number % length > 0) {
+        memcpy(data + index, src, number);
+    }
+
+    return data;
+}
+
+void FillMemory(void* dst, const uint8_t* src, size_t length, size_t number) {
+    if (length >= number) {
+        memcpy(dst, src, number);
+    } else {
+        uint8_t* data = create_space(src, length, number);
+        memcpy(dst, data, number);
+        delete[] data;
+    }
+}
+)";
+
+    const std::string FUZZER_STUB = R"(
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
+    $[fuzzer_body]$
+
+    return 0;
+}
+)";
+}
+
 FuzzerGenerator::FuzzerGenerator(std::string function_declaration,
                                  const std::shared_ptr<Function>& function_dump)
 : function_declaration_(std::move(function_declaration)),
@@ -16,14 +70,15 @@ bool FuzzerGenerator::Generate() {
         return false;
     }
 
-    if (!InsertFuzzerBody(result.second)) {
+    std::string fuzzer_stub(InsertFuzzerBody(result.second));
+    if (fuzzer_stub.empty()) {
         // Can not insert the body, nothing to insert
         return false;
     }
 
     fuzzer_ += HEADERS;
     fuzzer_ += function_declaration_;
-    fuzzer_ += FUZZER_STUB;
+    fuzzer_ += fuzzer_stub;
 
     return true;
 }
@@ -117,13 +172,14 @@ std::pair<bool, std::string> FuzzerGenerator::GenerateArguments() {
     return std::make_pair(true, arguments);
 }
 
-bool FuzzerGenerator::InsertFuzzerBody(std::string& body) {
+std::string FuzzerGenerator::InsertFuzzerBody(const std::string& body) {
+    std::string result;
+
     if (body.empty()) {
-        return false;
+        return result;
     }
 
     std::regex pattern(R"(\$\[fuzzer_body\]\$)", std::regex::ECMAScript);
-    FUZZER_STUB = std::regex_replace(FUZZER_STUB, pattern, body);
 
-    return true;
+    return std::regex_replace(FUZZER_STUB, pattern, body);
 }

@@ -9,17 +9,6 @@
 #include <regex>
 
 class FuzzerGenerator {
-private:
-    std::string HEADERS = R"(#include <cstdio>
-#include <cstdint>
-)";
-    std::string FUZZER_STUB = R"(
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-    $[fuzzer_body]$
-    return 0;
-}
-)";
-
 public:
     explicit FuzzerGenerator(std::string, const std::shared_ptr<Function>&);
 
@@ -34,7 +23,7 @@ private:
 
     std::pair<bool, std::string> GenerateFuzzerBody();
     std::pair<bool, std::string> GenerateArguments();
-    bool InsertFuzzerBody(std::string&);
+    std::string InsertFuzzerBody(const std::string&);
 };
 
 #endif //AUTOFUZZ_FUZZER_GENERATOR_H
