@@ -9,7 +9,6 @@
 //      2) Add more log entries
 //      3) !!! Comment
 //      4) !!! Add support for projects' analysis (libraries included)
-//      5) !!! Add more working types for fuzzer generation
 
 int main(int argc, char** argv) {
     llvm::cl::HideUnrelatedOptions(fuzzer_options);

@@ -176,7 +176,7 @@ bool Sanitizer::IsMemberOfTargetFunction(const llvm::Instruction& instruction) {
     return false;
 }
 
-void Sanitizer::UpdateIRModule(llvm::Module& module) {
+inline void Sanitizer::UpdateIRModule(llvm::Module& module) {
     const std::string& path = module.getModuleIdentifier();
     std::error_code error_code;
 
@@ -184,7 +184,7 @@ void Sanitizer::UpdateIRModule(llvm::Module& module) {
     module.print(file, nullptr);
 }
 
-void Sanitizer::Debug(llvm::Module& module) {
+inline void Sanitizer::Debug(llvm::Module& module) {
     llvm::raw_ostream& stdout_ = llvm::outs();
     module.print(stdout_, nullptr);
 }

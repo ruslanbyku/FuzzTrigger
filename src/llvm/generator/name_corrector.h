@@ -26,8 +26,8 @@ private:
 
     bool DropManglingOnTargetFunction(llvm::Module&, const std::string&);
 
-    void UpdateIRModule(llvm::Module&);
-    void Debug(llvm::Module&);
+    inline void UpdateIRModule(llvm::Module&);
+    inline void Debug(llvm::Module&);
 };
 
 

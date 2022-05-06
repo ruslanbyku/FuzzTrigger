@@ -76,7 +76,7 @@ bool NameCorrector::DropManglingOnTargetFunction(
     return !llvm::verifyModule(module);
 }
 
-void NameCorrector::UpdateIRModule(llvm::Module& module) {
+inline void NameCorrector::UpdateIRModule(llvm::Module& module) {
     const std::string& path = module.getModuleIdentifier();
     std::error_code error_code;
 
@@ -84,7 +84,7 @@ void NameCorrector::UpdateIRModule(llvm::Module& module) {
     module.print(file, nullptr);
 }
 
-void NameCorrector::Debug(llvm::Module& module) {
+inline void NameCorrector::Debug(llvm::Module& module) {
     llvm::raw_ostream& stdout_ = llvm::outs();
     module.print(stdout_, nullptr);
 }

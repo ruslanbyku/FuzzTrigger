@@ -40,8 +40,8 @@ private:
     bool IsDroppable(llvm::User*);
     bool IsMemberOfTargetFunction(const llvm::Instruction&);
 
-    void UpdateIRModule(llvm::Module&);
-    void Debug(llvm::Module&);
+    inline void UpdateIRModule(llvm::Module&);
+    inline void Debug(llvm::Module&);
 };
 
 

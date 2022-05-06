@@ -21,9 +21,17 @@ private:
 
     std::string                      fuzzer_;
 
-    std::pair<bool, std::string> GenerateFuzzerBody();
-    std::pair<bool, std::string> GenerateArguments();
+    bool IsSupported();
+
+    std::string GenerateFuzzerBody();
+    std::pair<std::string, std::string>
+                               CreateNumericVariable(BaseType, uint16_t);
+    inline std::string GetStars(uint8_t pointer_depth);
     std::string InsertFuzzerBody(const std::string&);
+
+    bool HasPlainTypeInArguments();
+    bool NeedStructForwardDeclaration();
+    std::string MakeStructForwardDeclaration();
 };
 
 #endif //AUTOFUZZ_FUZZER_GENERATOR_H
