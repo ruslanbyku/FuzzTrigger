@@ -27,10 +27,12 @@ uint8_t* CreateSpace(const uint8_t* src, size_t length, size_t number) {
 }
 
 void FillMemory(void* dst, const uint8_t* src, size_t length, size_t number) {
-    if (length >= number) {
+    if (length == 0) {
+        memset(dst, '\0', number);
+    } else if (length >= number) {
         memcpy(dst, src, number);
     } else {
-        uint8_t* data = create_space(src, length, number);
+        uint8_t* data = CreateSpace(src, length, number);
         memcpy(dst, data, number);
         delete[] data;
     }
@@ -215,14 +217,14 @@ std::string FuzzerGenerator::GenerateFuzzerBody() {
                 return {};
             }
 
-            initialization += result.first + ";\n";
-            initialization += "FillMemory(&";
+            initialization += result.first + "\n";
+            initialization += "\tFillMemory(&";
             initialization += result.second + ", ";
             initialization += "data, size, ";
             initialization += std::to_string(argument->type_->allocation_size_);
             initialization += ");\n";
             //
-            call_arguments += result.first;
+            call_arguments += result.second;
         }
 
         call_arguments += ", ";
@@ -241,7 +243,7 @@ std::string FuzzerGenerator::GenerateFuzzerBody() {
     //
     std::string body(initialization);
 
-    body += "(void) ";
+    body += "\t(void) ";
     body += function_dump_->name_;
     body += "(";
     body += call_arguments;

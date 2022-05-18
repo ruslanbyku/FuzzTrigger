@@ -197,6 +197,7 @@ int un_init(char* line) {
 }
 //
 
+/*
 static void strstore(char **str, const char *newstr);
 
 static char *sanitize_cookie_path(const char *cookie_path)
@@ -206,7 +207,7 @@ static char *sanitize_cookie_path(const char *cookie_path)
     if(!new_path)
         return NULL;
 
-    /* some stupid site sends path attribute with '"'. */
+    // some stupid site sends path attribute with '"'.
     len = strlen(new_path);
     if(new_path[0] == '\"') {
         memmove((void *)new_path, (const void *)(new_path + 1), len);
@@ -217,20 +218,21 @@ static char *sanitize_cookie_path(const char *cookie_path)
         len--;
     }
 
-    /* RFC6265 5.2.4 The Path Attribute */
+    // RFC6265 5.2.4 The Path Attribute
     if(new_path[0] != '/') {
-        /* Let cookie-path be the default-path. */
+        // Let cookie-path be the default-path.
         strstore(&new_path, "/");
         return new_path;
     }
 
-    /* convert /hoge/ to /hoge */
+    // convert /hoge/ to /hoge
     if(len && new_path[len - 1] == '/') {
         new_path[len - 1] = 0x0;
     }
 
     return new_path;
 }
+ */
 
 static /* (some comments here) */
 void strstore(char **str, const char *newstr) /* (some comments here) */
@@ -239,10 +241,11 @@ void strstore(char **str, const char *newstr) /* (some comments here) */
     *str = strdup(newstr);
 }
 
+
 //
 // libcurl vulnerable function (https://habr.com/ru/post/259671/)
 //
-/*
+
 static char* sanitize_cookie_path(const char* cookie_path) {
     size_t len;
     char* new_path = strdup(cookie_path);
@@ -270,7 +273,21 @@ static char* sanitize_cookie_path(const char* cookie_path) {
 
     return new_path;
 }
- */
+
+void stack_overflow(char* msg, size_t len) {
+    char buf[20];
+    for (int i = 0; i < len; ++i) {
+        buf[i] = msg[i];
+    }
+    // strcpy(buf, msg);
+}
+
+void heap_overflow(char* msg) {
+    char* buf = malloc(20);
+    strcpy(buf, msg);
+    free(buf);
+}
+
 //
 
 int main(int argc, char** argv) {
@@ -307,6 +324,9 @@ int main(int argc, char** argv) {
     sanitize_cookie_path('\"');
     //
     sanitize_cookie_path('\"');
+
+    stack_overflow("aaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 5);
+    heap_overflow("aaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
 
     return 0;
 }
