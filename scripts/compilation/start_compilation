@@ -3,16 +3,16 @@
 #
 # Targets to process
 #
-PROJECT=/home/chinesegranny/CLionProjects/AutoFuzz/test/fuzzing/libcurl/curl-7.81.0
-EXECUTABLE=/home/chinesegranny/CLionProjects/AutoFuzz/test/fuzzing/libcurl/curl-7.81.0/lib/.libs/libcurl.so
+PROJECT=$HOME/CLionProjects/AutoFuzz/test/fuzzing/libcurl/curl-7.81.0
+EXECUTABLE=$HOME/CLionProjects/AutoFuzz/test/fuzzing/libcurl/curl-7.81.0/lib/.libs/libcurl.so
 MANIFEST=MANIFEST.txt
 
 #
 # Paths to scripts
 #
-compile=/home/chinesegranny/CLionProjects/AutoFuzz/scripts/compilation/compile
-link=/home/chinesegranny/CLionProjects/AutoFuzz/scripts/compilation/link
-interpret=/home/chinesegranny/CLionProjects/AutoFuzz/scripts/compilation/interpret
+compile=$HOME/CLionProjects/AutoFuzz/scripts/compilation/compile
+link=$HOME/CLionProjects/AutoFuzz/scripts/compilation/link
+interpret=$HOME/CLionProjects/AutoFuzz/scripts/compilation/interpret
 
 # Compile to libcurl.so
 $compile -A --args=--with-openssl $PROJECT
