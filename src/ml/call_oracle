@@ -31,7 +31,7 @@ from keras.layers import Dense
 
 VERBOSE           = 0
 DEFAULT           = 1
-DATASET_DIRECTORY = "/home/chinesegranny/CLionProjects/AutoFuzz/src/ml/"
+DATASET_DIRECTORY = "$HOME/CLionProjects/AutoFuzz/src/ml/"
 DATASET_PATH      = DATASET_DIRECTORY + "fuzzer_parameters_dataset.csv"
 DATASET_DELIMITER = ','
 ACCURACY          = 3

@@ -3,10 +3,11 @@
 
 #include "module.h"
 
+#include <array>
 #include <cstdio>
 
 const char* const call_oracle =
-        "/home/chinesegranny/CLionProjects/AutoFuzz/src/ml/call_oracle";
+        "$HOME/CLionProjects/AutoFuzz/src/ml/call_oracle";
 
 enum ArgumentClassification : uint8_t {
     PARAM_ABSENT = 0, // no parameter

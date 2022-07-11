@@ -1,6 +1,6 @@
 #!/bin/bash
 
-flags_and_includes=" -Wall -Wextra -fno-rtti -std=gnu++20 -I/home/chinesegranny/CLionProjects/AutoFuzz/src -I/home/chinesegranny/CLionProjects/AutoFuzz/src/llvm -I/home/chinesegranny/CLionProjects/AutoFuzz/src/llvm/analysis -I/home/chinesegranny/CLionProjects/AutoFuzz/src/llvm/generator -I/home/chinesegranny/CLionProjects/AutoFuzz/src/system -I/home/chinesegranny/CLionProjects/AutoFuzz/src/log "
+flags_and_includes=" -Wall -Wextra -fno-rtti -std=gnu++20 -I$HOME/CLionProjects/AutoFuzz/src -I$HOME/CLionProjects/AutoFuzz/src/llvm -I$HOME/CLionProjects/AutoFuzz/src/llvm/analysis -I$HOME/CLionProjects/AutoFuzz/src/llvm/generator -I$HOME/CLionProjects/AutoFuzz/src/system -I$HOME/CLionProjects/AutoFuzz/src/log "
 
 clang++ $flags_and_includes -emit-llvm src/main.cc -S -o main.ll
 clang++ $flags_and_includes -emit-llvm src/module.cc -S -o module.ll
