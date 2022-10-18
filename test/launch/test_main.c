@@ -277,6 +277,7 @@ static char* sanitize_cookie_path(const char* cookie_path) {
 void stack_overflow(char* msg, size_t len) {
     char buf[20];
     for (int i = 0; i < len; ++i) {
+        // If len > strlen(msg) => heap-overflow
         buf[i] = msg[i];
     }
     // strcpy(buf, msg);

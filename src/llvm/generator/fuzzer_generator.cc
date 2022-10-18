@@ -155,6 +155,8 @@ bool FuzzerGenerator::IsSupported() {
 }
 
 std::string FuzzerGenerator::GenerateFuzzerBody() {
+    std::string dynamic_array_var;
+
     std::string initialization;
     std::string call_arguments;
 
@@ -170,9 +172,16 @@ std::string FuzzerGenerator::GenerateFuzzerBody() {
                 case TYPE_VOID:
                     call_arguments += "(void";
                     break;
-                case TYPE_INT8:
-                    call_arguments += "(char";
+                case TYPE_INT8: {
+                    dynamic_array_var = "string_";
+
+                    initialization += "char* string_ = new char[size + 1];\n";
+                    initialization += "memcpy(string_, data, size);\n";
+                    initialization += "string_[size] = 0x0;\n";
+
+                    call_arguments += dynamic_array_var;
                     break;
+                }
                 case TYPE_INT16:
                     call_arguments += "(int16_t";
                     break;
@@ -205,8 +214,10 @@ std::string FuzzerGenerator::GenerateFuzzerBody() {
                     return {};
             }
 
-            call_arguments += GetStars(pointer_depth);
-            call_arguments += ") data";
+            if (argument_type != TYPE_INT8) {
+                call_arguments += GetStars(pointer_depth);
+                call_arguments += ") data";
+            }
 
         } else {   // Not a pointer, plain data
             auto result =
@@ -247,7 +258,13 @@ std::string FuzzerGenerator::GenerateFuzzerBody() {
     body += function_dump_->name_;
     body += "(";
     body += call_arguments;
-    body += ");";
+    body += ");\n";
+
+    // Release the allotted memory
+    if (!dynamic_array_var.empty()) {
+        body += "delete[] ";
+        body += dynamic_array_var + ";\n";
+    }
 
     return body;
 }
@@ -315,9 +332,10 @@ std::string FuzzerGenerator::InsertFuzzerBody(const std::string& body) {
 
 bool FuzzerGenerator::HasPlainTypeInArguments() {
     for (const auto& argument: function_dump_->arguments_) {
-        bool is_pointer = argument->type_->pointer_depth_ > 0;
+        BaseType argument_type = argument->type_->base_type_;
+        bool is_pointer        = argument->type_->pointer_depth_ > 0;
 
-        if (!is_pointer) {
+        if (!is_pointer || argument_type == TYPE_INT8) {
             return true;
         }
     }

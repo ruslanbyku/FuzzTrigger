@@ -12,7 +12,7 @@ static char* sanitize_cookie_path(const char* cookie_path) {
     }
 
     if (new_path[0] == '\"') {
-        memmove((void *)new_path, (const void*)(new_path + 1), strlen(new_path));
+        memmove((void*)new_path, (const void*)(new_path + 1), strlen(new_path));
     }
     if (new_path[strlen(new_path) - 1] == '\"') {
         new_path[strlen(new_path) - 1] = 0x0;

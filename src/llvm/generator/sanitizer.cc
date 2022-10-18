@@ -43,6 +43,8 @@ bool Sanitizer::runOnModule(llvm::Module& module) {
         return false;
     }
 
+    AppendAddressSanitizer();
+
     UpdateIRModule(module);
     //Debug(module);
 
@@ -126,6 +128,10 @@ bool Sanitizer::SanitizeModule(llvm::Module& module) {
     // true  - An error is present
     // false - The module is okay
     return !llvm::verifyModule(module);
+}
+
+void Sanitizer::AppendAddressSanitizer() {
+    target_function_->addFnAttr(llvm::Attribute::SanitizeAddress);
 }
 
 bool Sanitizer::IsDroppable(llvm::User* user) {

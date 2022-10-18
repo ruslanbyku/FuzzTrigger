@@ -13,6 +13,7 @@
 #include <llvm/Support/FileSystem.h>
 #include <llvm/IR/Operator.h>
 #include <llvm/IR/Verifier.h>
+#include <llvm/IR/Attributes.h>
 
 using Visibility = llvm::GlobalValue::VisibilityTypes;
 using Linkage    = llvm::GlobalValue::LinkageTypes;
@@ -37,6 +38,8 @@ private:
     std::map<llvm::Constant*, bool>  visited_constants_;
 
     bool SanitizeModule(llvm::Module&);
+    void AppendAddressSanitizer();
+
     bool IsDroppable(llvm::User*);
     bool IsMemberOfTargetFunction(const llvm::Instruction&);
 
