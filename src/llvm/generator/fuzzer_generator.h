@@ -3,10 +3,30 @@
 
 #include "module.h"
 
-#include <string>
-#include <cstdint>
-#include <vector>
 #include <regex>
+#include <queue>
+
+struct TargetFunctionArgument {
+    std::string              forward_decl;
+
+    std::string              variable_type;
+    std::string              variable_name;
+    std::string              variable_init;
+
+    std::vector<std::string> before_call;
+
+    std::string              call_arg;
+
+    std::vector<std::string> after_call;
+
+    bool additional_hdrs = false;
+    bool support_funcs   = false;
+};
+
+using TargetFunctionArgumentOptions =
+        std::vector<std::unique_ptr<TargetFunctionArgument>>;
+
+using TargetFunctionArgumentQueue = std::queue<TargetFunctionArgumentOptions>;
 
 class FuzzerGenerator {
 public:
@@ -23,15 +43,35 @@ private:
 
     bool IsSupported();
 
-    std::string GenerateFuzzerBody();
-    std::pair<std::string, std::string>
-                               CreateNumericVariable(BaseType, uint16_t);
-    inline std::string GetStars(uint8_t pointer_depth);
-    std::string InsertFuzzerBody(const std::string&);
+    std::string ConstructFuzzerStubBody(const std::string&,
+                                        const std::string&,
+                                        const std::string&,
+                                        const std::string&);
+    std::string InsertFuzzerStubBody(const std::string&);
 
-    bool HasPlainTypeInArguments();
-    bool NeedStructForwardDeclaration();
-    std::string MakeStructForwardDeclaration();
+    bool ProcessFunctionArguments(TargetFunctionArgumentQueue&);
+
+    TargetFunctionArgumentOptions
+                          ProcessArgumentVoid(const std::unique_ptr<Argument>&);
+    TargetFunctionArgumentOptions
+                          ProcessArgumentInt8(const std::unique_ptr<Argument>&);
+    TargetFunctionArgumentOptions
+                         ProcessArgumentInt16(const std::unique_ptr<Argument>&);
+    TargetFunctionArgumentOptions
+                         ProcessArgumentInt32(const std::unique_ptr<Argument>&);
+    TargetFunctionArgumentOptions
+                         ProcessArgumentInt64(const std::unique_ptr<Argument>&);
+    TargetFunctionArgumentOptions
+                         ProcessArgumentFloat(const std::unique_ptr<Argument>&);
+    TargetFunctionArgumentOptions
+                        ProcessArgumentDouble(const std::unique_ptr<Argument>&);
+    TargetFunctionArgumentOptions
+                        ProcessArgumentStruct(const std::unique_ptr<Argument>&);
+
+    TargetFunctionArgumentOptions
+                           HandleNumeric(const std::unique_ptr<Argument>&);
+
+    inline std::string GetStars(uint8_t pointer_depth);
 };
 
 #endif //AUTOFUZZ_FUZZER_GENERATOR_H
