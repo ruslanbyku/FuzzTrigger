@@ -28,6 +28,8 @@ using TargetFunctionArgumentOptions =
 
 using TargetFunctionArgumentQueue = std::queue<TargetFunctionArgumentOptions>;
 
+using CallArguments = std::vector<std::vector<std::string>>;
+
 class FuzzerGenerator {
 public:
     explicit FuzzerGenerator(std::string, const std::shared_ptr<Function>&);
@@ -46,7 +48,7 @@ private:
     std::string ConstructFuzzerStubBody(const std::string&,
                                         const std::string&,
                                         const std::string&,
-                                        const std::string&);
+                                        const CallArguments&);
     std::string InsertFuzzerStubBody(const std::string&);
 
     bool ProcessFunctionArguments(TargetFunctionArgumentQueue&);

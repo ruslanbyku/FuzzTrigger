@@ -274,13 +274,16 @@ static char* sanitize_cookie_path(const char* cookie_path) {
     return new_path;
 }
 
-void stack_overflow(char* msg, size_t len) {
+void stack_overflow(char* msg, size_t len, int X, int Y, char* test_msg) {
     char buf[20];
     for (int i = 0; i < len; ++i) {
         // If len > strlen(msg) => heap-overflow
         buf[i] = msg[i];
     }
     // strcpy(buf, msg);
+
+    ++X;
+    --Y;
 }
 
 void heap_overflow(char* msg) {
@@ -326,7 +329,8 @@ int main(int argc, char** argv) {
     //
     sanitize_cookie_path('\"');
 
-    stack_overflow("aaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 5);
+    stack_overflow("aaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 5, 0, 1, "?"
+                                                             "");
     heap_overflow("aaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
 
     return 0;

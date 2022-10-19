@@ -7,8 +7,8 @@ namespace {
     const std::string ADDITIONAL_HEADERS = R"(#include <cstring>
 )";
 
-    const std::string MEMORY_FUNCTIONS = R"(
-uint8_t* CreateSpace(const uint8_t* src, size_t length, size_t number) {
+    const std::string MEMORY_FUNCTIONS =
+R"(uint8_t* CreateSpace(const uint8_t* src, size_t length, size_t number) {
     size_t index  = 0;
     uint8_t* data = new uint8_t[number];
 
@@ -36,14 +36,14 @@ void FillMemory(void* dst, const uint8_t* src, size_t length, size_t number) {
         delete[] data;
     }
 }
+
 )";
 
     const std::string FUZZER_STUB = R"(
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-    $[fuzzer_body]$
+$[fuzzer_body]$
     return 0;
-}
-)";
+})";
 }
 
 FuzzerGenerator::FuzzerGenerator(std::string function_declaration,
@@ -88,16 +88,15 @@ bool FuzzerGenerator::Generate() {
     std::string target_func_decl;
 
     std::string before;
-    std::string call_args;
+    CallArguments call_args;
     std::string after;
 
     bool additional_hdrs = false;
     bool support_funcs   = false;
-    uint16_t args_num    = Q_args.size();
-    uint16_t arg_pos     = 1;
     while (!Q_args.empty()) {
         TargetFunctionArgumentOptions& arg_options = Q_args.front();
 
+        std::vector<std::string> call_arg;
         for (const auto& argument: arg_options) {
             if (!argument->forward_decl.empty()) {
                 forward_decl += argument->forward_decl;
@@ -105,17 +104,19 @@ bool FuzzerGenerator::Generate() {
             }
 
             if (!argument->variable_type.empty()) {
+                before += "\t";
                 before += argument->variable_type;
                 before += " ";
             }
 
             if (!argument->variable_name.empty()) {
                 before += argument->variable_name;
-            }
 
-            if (!argument->variable_init.empty()) {
-                before += " = ";
-                before += argument->variable_init;
+                if (!argument->variable_init.empty()) {
+                    before += " = ";
+                    before += argument->variable_init;
+                }
+
                 before += ";\n";
             }
 
@@ -125,17 +126,17 @@ bool FuzzerGenerator::Generate() {
                     before += line;
                     before += "\n";
                 }
+
+                before += "\n";
             }
 
             if (!argument->call_arg.empty()) {
-                call_args += argument->call_arg;
-
-                if (arg_pos++ < args_num) {
-                    call_args += ", ";
-                }
+                call_arg.push_back(argument->call_arg);
             }
 
             if (!argument->after_call.empty()) {
+                after += "\n";
+
                 for (const auto& line: argument->after_call) {
                     after += "\t";
                     after += line;
@@ -146,12 +147,9 @@ bool FuzzerGenerator::Generate() {
             if (argument->additional_hdrs) additional_hdrs = true;
 
             if (argument->support_funcs) support_funcs = true;
-
-            //
-            // For now I do not support a further cycle
-            //
-            break;
         }
+
+        call_args.push_back(std::move(call_arg));
 
         Q_args.pop();
     }
@@ -183,9 +181,8 @@ bool FuzzerGenerator::Generate() {
     fuzzer_ += "\n";
 
     std::string fuzzer_stub_body(
-            ConstructFuzzerStubBody(before, call_args,
-                                    after, function_dump_->name_)
-                                    );
+            ConstructFuzzerStubBody(before, after,
+                                    function_dump_->name_, call_args));
     std::string fuzzer_stub(InsertFuzzerStubBody(fuzzer_stub_body));
     if (fuzzer_stub.empty()) {
         // Can not insert the body, nothing to insert
@@ -317,17 +314,41 @@ bool FuzzerGenerator::ProcessFunctionArguments(TargetFunctionArgumentQueue& Q) {
 }
 
 std::string FuzzerGenerator::ConstructFuzzerStubBody(
-        const std::string& before, const std::string& call_args,
-        const std::string& after, const std::string& func_name) {
+        const std::string& before, const std::string& after,
+        const std::string& func_name, const CallArguments& call_args) {
     std::string fuzzer_stub_body;
 
     fuzzer_stub_body += before;
 
-    fuzzer_stub_body += "\t(void) ";
-    fuzzer_stub_body += func_name;
-    fuzzer_stub_body += "(";
-    fuzzer_stub_body += call_args;
-    fuzzer_stub_body += ");\n";
+    uint32_t max_options = 1;
+    for (const auto& call_arg: call_args) {
+        max_options =
+                std::max(max_options, static_cast<uint32_t>(call_arg.size()));
+    }
+
+    uint16_t args_num = call_args.size();
+    for (uint32_t option = 0; option < max_options; ++option) {
+        fuzzer_stub_body += "\t(void) ";
+        fuzzer_stub_body += func_name;
+        fuzzer_stub_body += "(";
+
+        for (uint16_t ndx = 0; ndx < args_num; ++ndx) {
+            auto option_num = static_cast<uint16_t>(call_args[ndx].size());
+
+            if (option_num > 1) {
+                // To avoid overflow in case option num is variable
+                fuzzer_stub_body += call_args[ndx][option % option_num];
+            } else {
+                fuzzer_stub_body += call_args[ndx][0];
+            }
+
+            if (ndx < args_num - 1) {
+                fuzzer_stub_body += ", ";
+            }
+        }
+
+        fuzzer_stub_body += ");\n";
+    }
 
     fuzzer_stub_body += after;
 
@@ -660,19 +681,14 @@ FuzzerGenerator::HandleNumeric(const std::unique_ptr<Argument>& argument) {
         std::vector<std::string> before_call;
         std::string line;
         // Line 1
-        line = trgt_argument_opt2->variable_type;
-        line += " ";
-        line += trgt_argument_opt2->variable_name;
-        line += ";";
-        before_call.push_back(std::move(line));
-
-        // Line 2
         line = "FillMemory(&";
         line += trgt_argument_opt2->variable_name;
         line += ", data, size, ";
         line += std::to_string(allocation_size);
         line += ");";
         before_call.push_back(std::move(line));
+
+        trgt_argument_opt2->before_call = before_call;
         //
         // End of BEFORE
         //
