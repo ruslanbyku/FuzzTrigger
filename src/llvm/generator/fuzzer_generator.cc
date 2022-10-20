@@ -79,7 +79,7 @@ bool FuzzerGenerator::Generate() {
     TargetFunctionArgumentQueue Q_args;
 
     if (!ProcessFunctionArguments(Q_args)) {
-        // An unsupported type was encountered, but it actually should be
+        // An unsupported type was encountered, but it actually should not be
         return false;
     }
 
@@ -88,15 +88,25 @@ bool FuzzerGenerator::Generate() {
     std::string target_func_decl;
 
     std::string before;
+    //
+    // ...(char*, int, int, char*) {}
+    // [string_0]
+    // [(int32_t) size, var_1]
+    // [(int32_t) size, var_2]
+    // [string_3]
+    //
     CallArguments call_args;
     std::string after;
 
     bool additional_hdrs = false;
     bool support_funcs   = false;
+
     while (!Q_args.empty()) {
         TargetFunctionArgumentOptions& arg_options = Q_args.front();
 
-        std::vector<std::string> call_arg;
+        // Several options for one argument (integer)
+        std::vector<std::string> call_arg_opts;
+
         for (const auto& argument: arg_options) {
             if (!argument->forward_decl.empty()) {
                 forward_decl += argument->forward_decl;
@@ -131,7 +141,7 @@ bool FuzzerGenerator::Generate() {
             }
 
             if (!argument->call_arg.empty()) {
-                call_arg.push_back(argument->call_arg);
+                call_arg_opts.push_back(argument->call_arg);
             }
 
             if (!argument->after_call.empty()) {
@@ -149,7 +159,7 @@ bool FuzzerGenerator::Generate() {
             if (argument->support_funcs) support_funcs = true;
         }
 
-        call_args.push_back(std::move(call_arg));
+        call_args.push_back(std::move(call_arg_opts));
 
         Q_args.pop();
     }
@@ -180,6 +190,7 @@ bool FuzzerGenerator::Generate() {
     fuzzer_ += function_declaration_;
     fuzzer_ += "\n";
 
+    // A fuzzer stub part
     std::string fuzzer_stub_body(
             ConstructFuzzerStubBody(before, after,
                                     function_dump_->name_, call_args));
@@ -320,10 +331,13 @@ std::string FuzzerGenerator::ConstructFuzzerStubBody(
 
     fuzzer_stub_body += before;
 
+    // Since an argument can have multiple options (integer), then call
+    // the target function for each option
     uint32_t max_options = 1;
-    for (const auto& call_arg: call_args) {
-        max_options =
-                std::max(max_options, static_cast<uint32_t>(call_arg.size()));
+    for (const auto& call_arg_opts: call_args) {
+        auto options_num = static_cast<uint32_t>(call_arg_opts.size());
+
+        max_options = std::max(max_options, options_num);
     }
 
     uint16_t args_num = call_args.size();
@@ -333,14 +347,10 @@ std::string FuzzerGenerator::ConstructFuzzerStubBody(
         fuzzer_stub_body += "(";
 
         for (uint16_t ndx = 0; ndx < args_num; ++ndx) {
-            auto option_num = static_cast<uint16_t>(call_args[ndx].size());
+            auto options_num = static_cast<uint16_t>(call_args[ndx].size());
 
-            if (option_num > 1) {
-                // To avoid overflow in case option num is variable
-                fuzzer_stub_body += call_args[ndx][option % option_num];
-            } else {
-                fuzzer_stub_body += call_args[ndx][0];
-            }
+            // To avoid overflow in case options number is variable
+            fuzzer_stub_body += call_args[ndx][option % options_num];
 
             if (ndx < args_num - 1) {
                 fuzzer_stub_body += ", ";
