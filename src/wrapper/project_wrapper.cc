@@ -442,8 +442,6 @@ bool ProjectWrapper::PerformGeneration(
                                << "' went successful.";
     }
 
-    //return true;
-
     // --------------------------------------------------------------------- //
     //                       Generate fuzzer stub code                       //
     // --------------------------------------------------------------------- //

@@ -1,0 +1,19 @@
+#!/bin/bash
+
+FILENAME=curl-7.85.0
+
+cd "$FILENAME"/ || tar xvfz "$FILENAME".tar.gz && cd "$FILENAME"/
+#
+# Compile
+#
+export LLVM_COMPILER=clang
+CC=wllvm ./configure --with-openssl
+make
+unset LLVM_COMPILER
+cd ..
+#
+# Extract
+#
+extract-bc --manifest --bitcode "$FILENAME"/lib/.libs/libcurl.so
+llvm-dis "$FILENAME"/lib/.libs/libcurl.so.bc -o libcurl.ll
+mv "$FILENAME"/lib/.libs/libcurl.so.llvm.manifest MANIFEST.txt
