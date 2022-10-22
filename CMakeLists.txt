@@ -2,7 +2,7 @@
 # echo | gcc -Wp,-v -x {language} - -fsyntax-only
 
 cmake_minimum_required(VERSION 3.21)
-project(AutoFuzz)
+project(FuzzTrigger)
 set(CMAKE_CXX_STANDARD 20)
 
 #
@@ -80,12 +80,12 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti") # -fno-exceptions
 # Turn on basic optimization
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O1")
 
-add_executable(autofuzz ${SOURCES})
+add_executable(fuzztrigger ${SOURCES})
 
 #
 # Link LLVM
 #
-target_link_libraries(autofuzz LLVM ${clang_lib})
+target_link_libraries(fuzztrigger LLVM ${clang_lib})
 
 #
 # Debug messages

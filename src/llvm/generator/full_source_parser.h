@@ -1,5 +1,5 @@
-#ifndef AUTOFUZZ_FULL_SOURCE_PARSER_H
-#define AUTOFUZZ_FULL_SOURCE_PARSER_H
+#ifndef FUZZTRIGGER_FULL_SOURCE_PARSER_H
+#define FUZZTRIGGER_FULL_SOURCE_PARSER_H
 
 #include "module.h"
 #include "function_declaration.h"
@@ -71,4 +71,4 @@ private:
     SourceEntity&              source_entity_;
 };
 
-#endif //AUTOFUZZ_FULL_SOURCE_PARSER_H
+#endif //FUZZTRIGGER_FULL_SOURCE_PARSER_H

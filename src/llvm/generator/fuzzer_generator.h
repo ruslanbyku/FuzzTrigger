@@ -1,5 +1,5 @@
-#ifndef AUTOFUZZ_FUZZER_GENERATOR_H
-#define AUTOFUZZ_FUZZER_GENERATOR_H
+#ifndef FUZZTRIGGER_FUZZER_GENERATOR_H
+#define FUZZTRIGGER_FUZZER_GENERATOR_H
 
 #include "module.h"
 
@@ -76,4 +76,4 @@ private:
     inline std::string GetStars(uint8_t pointer_depth);
 };
 
-#endif //AUTOFUZZ_FUZZER_GENERATOR_H
+#endif //FUZZTRIGGER_FUZZER_GENERATOR_H

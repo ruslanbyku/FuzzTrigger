@@ -1,5 +1,5 @@
-#ifndef AUTOFUZZ_MODULE_H
-#define AUTOFUZZ_MODULE_H
+#ifndef FUZZTRIGGER_MODULE_H
+#define FUZZTRIGGER_MODULE_H
 
 #include "type.h"
 
@@ -66,4 +66,4 @@ struct Argument {
     std::unique_ptr<Type> type_;
 };
 
-#endif //AUTOFUZZ_MODULE_H
+#endif //FUZZTRIGGER_MODULE_H

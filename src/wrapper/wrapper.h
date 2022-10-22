@@ -1,5 +1,5 @@
-#ifndef AUTOFUZZ_WRAPPER_H
-#define AUTOFUZZ_WRAPPER_H
+#ifndef FUZZTRIGGER_WRAPPER_H
+#define FUZZTRIGGER_WRAPPER_H
 
 #include "full_source_parser.h"
 #include "fuzzer_generator.h"
@@ -57,4 +57,4 @@ protected:
     void EmptyGarbage(bool);
 };
 
-#endif //AUTOFUZZ_WRAPPER_H
+#endif //FUZZTRIGGER_WRAPPER_H

@@ -1,5 +1,5 @@
-#ifndef AUTOFUZZ_SANITIZER_H
-#define AUTOFUZZ_SANITIZER_H
+#ifndef FUZZTRIGGER_SANITIZER_H
+#define FUZZTRIGGER_SANITIZER_H
 
 #include "module.h"
 
@@ -48,4 +48,4 @@ private:
 };
 
 
-#endif //AUTOFUZZ_SANITIZER_H
+#endif //FUZZTRIGGER_SANITIZER_H

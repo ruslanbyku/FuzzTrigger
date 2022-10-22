@@ -1,4 +1,4 @@
-# AutoFuzz
+# FuzzTrigger
 
 ### Introduction
 
@@ -12,7 +12,7 @@ code is written for them. Then the two pieces are combined
 into one entity and compiled into an executable fuzzer
 program that can test the code for bugs and vulnerabilities.
 
-*AutoFuzz* is a tentative and provisional name, so it may
+*FuzzTrigger* is a tentative and provisional name, so it may
 be changed over time. It uses
 [libFuzzer](https://llvm.org/docs/LibFuzzer.html) and
 [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html) in
@@ -23,8 +23,8 @@ inspired by [FuzzGen](https://github.com/HexHive/FuzzGen/).
 Currently, under development, readiness ~80%.
 
 ### Dependencies
-* llvm/clang (13.0.1)
-* [wllvm](https://github.com/travitch/whole-program-llvm) (but not directly by *AutoFuzz*)
+* llvm/clang (14.0.6)
+* [wllvm](https://github.com/travitch/whole-program-llvm) (but not directly by *FuzzTrigger*)
 
 ### License
 None

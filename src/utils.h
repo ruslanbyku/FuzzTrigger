@@ -1,5 +1,5 @@
-#ifndef AUTOFUZZ_UTILS_H
-#define AUTOFUZZ_UTILS_H
+#ifndef FUZZTRIGGER_UTILS_H
+#define FUZZTRIGGER_UTILS_H
 
 #include <unistd.h>
 #include <random>
@@ -25,4 +25,4 @@ namespace Utils {
     std::string GetTimeStamp();
 }
 
-#endif //AUTOFUZZ_UTILS_H
+#endif //FUZZTRIGGER_UTILS_H

@@ -1,5 +1,5 @@
-#ifndef AUTOFUZZ_CFG_H
-#define AUTOFUZZ_CFG_H
+#ifndef FUZZTRIGGER_CFG_H
+#define FUZZTRIGGER_CFG_H
 
 #include <cstdint>
 #include <vector>
@@ -140,4 +140,4 @@ public:
     FunctionCFG& operator=(FunctionCFG&&)      = delete;
 };
 
-#endif //AUTOFUZZ_CFG_H
+#endif //FUZZTRIGGER_CFG_H

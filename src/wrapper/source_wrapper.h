@@ -1,5 +1,5 @@
-#ifndef AUTOFUZZ_SOURCE_WRAPPER_H
-#define AUTOFUZZ_SOURCE_WRAPPER_H
+#ifndef FUZZTRIGGER_SOURCE_WRAPPER_H
+#define FUZZTRIGGER_SOURCE_WRAPPER_H
 
 #include "wrapper.h"
 
@@ -42,4 +42,4 @@ private:
     std::string GetDeclaration(const std::string&) const override;
 };
 
-#endif //AUTOFUZZ_SOURCE_WRAPPER_H
+#endif //FUZZTRIGGER_SOURCE_WRAPPER_H

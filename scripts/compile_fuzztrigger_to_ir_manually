@@ -1,6 +1,6 @@
 #!/bin/bash
 
-flags_and_includes=" -Wall -Wextra -fno-rtti -std=gnu++20 -I$HOME/CLionProjects/AutoFuzz/src -I$HOME/CLionProjects/AutoFuzz/src/llvm -I$HOME/CLionProjects/AutoFuzz/src/llvm/analysis -I$HOME/CLionProjects/AutoFuzz/src/llvm/generator -I$HOME/CLionProjects/AutoFuzz/src/system -I$HOME/CLionProjects/AutoFuzz/src/log "
+flags_and_includes=" -Wall -Wextra -fno-rtti -std=gnu++20 -I$HOME/CLionProjects/FuzzTrigger/src -I$HOME/CLionProjects/FuzzTrigger/src/llvm -I$HOME/CLionProjects/FuzzTrigger/src/llvm/analysis -I$HOME/CLionProjects/FuzzTrigger/src/llvm/generator -I$HOME/CLionProjects/FuzzTrigger/src/system -I$HOME/CLionProjects/FuzzTrigger/src/log "
 
 clang++ $flags_and_includes -emit-llvm src/main.cc -S -o main.ll
 clang++ $flags_and_includes -emit-llvm src/module.cc -S -o module.ll
@@ -17,7 +17,7 @@ clang++ $flags_and_includes -emit-llvm src/system/source_wrapper.cc -S -o source
 
 llvm-link main.ll module.ll analysis.ll file.ll fuzzer_generator.ll \
 virtual_mapper.ll sanitizer.ll pass_launcher.ll name_corrector.ll \
-compiler.ll utils.ll source_wrapper.ll -S -o AutoFuzz.ll
+compiler.ll utils.ll source_wrapper.ll -S -o FuzzTrigger.ll
 
 rm main.ll
 rm module.ll

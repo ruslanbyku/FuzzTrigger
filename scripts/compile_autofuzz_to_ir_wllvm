@@ -1,9 +1,0 @@
-#!/bin/bash
-
-export LLVM_COMPILER=clang
-CXX=wllvm++ cmake .
-make
-unset LLVM_COMPILER
-extract-bc --manifest autofuzz
-llvm-dis autofuzz.bc -o autofuzz.ll
-mv autofuzz.llvm.manifest MANIFEST.txt

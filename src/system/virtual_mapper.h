@@ -1,5 +1,5 @@
-#ifndef AUTOFUZZ_VIRTUAL_MAPPER_H
-#define AUTOFUZZ_VIRTUAL_MAPPER_H
+#ifndef FUZZTRIGGER_VIRTUAL_MAPPER_H
+#define FUZZTRIGGER_VIRTUAL_MAPPER_H
 
 #include <unistd.h>
 #include <sys/mman.h>
@@ -36,4 +36,4 @@ private:
 
 };
 
-#endif //AUTOFUZZ_VIRTUAL_MAPPER_H
+#endif //FUZZTRIGGER_VIRTUAL_MAPPER_H

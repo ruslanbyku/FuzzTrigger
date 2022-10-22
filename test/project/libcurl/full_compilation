@@ -2,16 +2,16 @@
 
 FILENAME=curl-7.85.0
 
-PROJECT=$HOME/CLionProjects/AutoFuzz/test/fuzzing/libcurl/"$FILENAME"
-EXECUTABLE=$HOME/CLionProjects/AutoFuzz/test/fuzzing/libcurl/"$FILENAME"/lib/.libs/libcurl.so
+PROJECT=$HOME/CLionProjects/FuzzTrigger/test/fuzzing/libcurl/"$FILENAME"
+EXECUTABLE=$HOME/CLionProjects/FuzzTrigger/test/fuzzing/libcurl/"$FILENAME"/lib/.libs/libcurl.so
 MANIFEST=MANIFEST.txt
 
 #
 # Paths to scripts
 #
-compile=$HOME/CLionProjects/AutoFuzz/scripts/compilation/compile
-link=$HOME/CLionProjects/AutoFuzz/scripts/compilation/link
-interpret=$HOME/CLionProjects/AutoFuzz/scripts/compilation/interpret
+compile=$HOME/CLionProjects/FuzzTrigger/scripts/compilation/compile
+link=$HOME/CLionProjects/FuzzTrigger/scripts/compilation/link
+interpret=$HOME/CLionProjects/FuzzTrigger/scripts/compilation/interpret
 
 #
 # Do the business

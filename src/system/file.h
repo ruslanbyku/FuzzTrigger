@@ -1,5 +1,5 @@
-#ifndef AUTOFUZZ_FILE_H
-#define AUTOFUZZ_FILE_H
+#ifndef FUZZTRIGGER_FILE_H
+#define FUZZTRIGGER_FILE_H
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -63,4 +63,4 @@ private:
     int32_t Open(int32_t, uint32_t);
 };
 
-#endif //AUTOFUZZ_FILE_H
+#endif //FUZZTRIGGER_FILE_H

@@ -1,5 +1,5 @@
-#ifndef AUTOFUZZ_ANALYSIS_H
-#define AUTOFUZZ_ANALYSIS_H
+#ifndef FUZZTRIGGER_ANALYSIS_H
+#define FUZZTRIGGER_ANALYSIS_H
 
 #include "module.h"
 #include "cfg.h"
@@ -98,4 +98,4 @@ private:
     bool IsStandalone(const llvm::Function&);
 };
 
-#endif //AUTOFUZZ_ANALYSIS_H
+#endif //FUZZTRIGGER_ANALYSIS_H

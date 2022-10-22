@@ -1,5 +1,5 @@
-#ifndef AUTOFUZZ_PASS_LAUNCHER_H
-#define AUTOFUZZ_PASS_LAUNCHER_H
+#ifndef FUZZTRIGGER_PASS_LAUNCHER_H
+#define FUZZTRIGGER_PASS_LAUNCHER_H
 
 #include "analysis.h"
 #include "sanitizer.h"
@@ -79,4 +79,4 @@ bool PassLauncher::LaunchOnFunction(
     return operation_status;
 }
 
-#endif //AUTOFUZZ_PASS_LAUNCHER_H
+#endif //FUZZTRIGGER_PASS_LAUNCHER_H

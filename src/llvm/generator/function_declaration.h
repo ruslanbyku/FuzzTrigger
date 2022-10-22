@@ -1,5 +1,5 @@
-#ifndef AUTOFUZZ_FUNCTION_DECLARATION_H
-#define AUTOFUZZ_FUNCTION_DECLARATION_H
+#ifndef FUZZTRIGGER_FUNCTION_DECLARATION_H
+#define FUZZTRIGGER_FUNCTION_DECLARATION_H
 
 #include <string>
 
@@ -28,4 +28,4 @@ namespace FunctionDeclaration {
     std::string Extract(clang::ASTContext*, clang::FunctionDecl*);
 }
 
-#endif //AUTOFUZZ_FUNCTION_DECLARATION_H
+#endif //FUZZTRIGGER_FUNCTION_DECLARATION_H

@@ -1,7 +1,7 @@
 # CMAKE FOR TEST PURPOSES
 
 cmake_minimum_required(VERSION 3.21)
-project(AutoFuzz)
+project(FuzzTrigger)
 set(CMAKE_CXX_STANDARD 20)
 
 find_package(LLVM)
@@ -20,9 +20,9 @@ set(SOURCES
         src/main.cc
         )
 
-add_executable(AutoFuzz ${SOURCES})
+add_executable(FuzzTrigger ${SOURCES})
 
 llvm_map_components_to_libnames(llvm_libs support core irreader)
-target_link_libraries(AutoFuzz ${llvm_libs})
+target_link_libraries(FuzzTrigger ${llvm_libs})
 
 message(STATUS "Complete.")

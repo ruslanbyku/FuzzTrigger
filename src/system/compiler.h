@@ -1,5 +1,5 @@
-#ifndef AUTOFUZZ_COMPILER_H
-#define AUTOFUZZ_COMPILER_H
+#ifndef FUZZTRIGGER_COMPILER_H
+#define FUZZTRIGGER_COMPILER_H
 
 #include "file.h"
 #include "logger.h"
@@ -23,4 +23,4 @@ namespace Compiler {
     bool CompileToIR(const File&, const File&);
 }
 
-#endif //AUTOFUZZ_COMPILER_H
+#endif //FUZZTRIGGER_COMPILER_H

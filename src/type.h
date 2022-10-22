@@ -1,5 +1,5 @@
-#ifndef AUTOFUZZ_TYPE_H
-#define AUTOFUZZ_TYPE_H
+#ifndef FUZZTRIGGER_TYPE_H
+#define FUZZTRIGGER_TYPE_H
 
 #include <cstdint>
 #include <string>
@@ -83,4 +83,4 @@ struct FunctionType : public Type {
     FunctionType& operator=(FunctionType&&)      = delete;
 };
 
-#endif //AUTOFUZZ_TYPE_H
+#endif //FUZZTRIGGER_TYPE_H

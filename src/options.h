@@ -1,5 +1,5 @@
-#ifndef AUTOFUZZ_OPTIONS_H
-#define AUTOFUZZ_OPTIONS_H
+#ifndef FUZZTRIGGER_OPTIONS_H
+#define FUZZTRIGGER_OPTIONS_H
 
 #include "llvm/Support/CommandLine.h"
 
@@ -26,4 +26,4 @@ llvm::cl::alias sources_alias(
         llvm::cl::cat(fuzzer_options)
 );
 
-#endif //AUTOFUZZ_OPTIONS_H
+#endif //FUZZTRIGGER_OPTIONS_H

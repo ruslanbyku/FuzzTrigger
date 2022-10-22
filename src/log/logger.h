@@ -1,5 +1,5 @@
-#ifndef AUTOFUZZ_LOGGER_H
-#define AUTOFUZZ_LOGGER_H
+#ifndef FUZZTRIGGER_LOGGER_H
+#define FUZZTRIGGER_LOGGER_H
 
 #include "utils.h"
 
@@ -215,4 +215,4 @@ inline void FinishLogging() {
     EndLogger();
 }
 
-#endif //AUTOFUZZ_LOGGER_H
+#endif //FUZZTRIGGER_LOGGER_H
