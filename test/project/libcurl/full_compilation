@@ -9,9 +9,9 @@ MANIFEST=MANIFEST.txt
 #
 # Paths to scripts
 #
-compile=$HOME/CLionProjects/FuzzTrigger/scripts/compilation/compile
-link=$HOME/CLionProjects/FuzzTrigger/scripts/compilation/link
-interpret=$HOME/CLionProjects/FuzzTrigger/scripts/compilation/interpret
+compile=$HOME/CLionProjects/FuzzTrigger/scripts/compilation/compile.py
+link=$HOME/CLionProjects/FuzzTrigger/scripts/compilation/link.py
+interpret=$HOME/CLionProjects/FuzzTrigger/scripts/compilation/interpret.py
 
 #
 # Do the business
